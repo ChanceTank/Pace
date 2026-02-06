@@ -1,0 +1,21 @@
+{
+	"database": {
+		"path": "pace.db",
+		"backupInterval": 86400000
+	},
+	"app": {
+		"name": "Pace",
+		"version": "1.0.0",
+		"window": {
+			"width": 800,
+			"height": 600,
+			"minWidth": 600,
+			"minHeight": 400
+		}
+	},
+	"features": {
+		"notifications": true,
+		"autoBackup": true,
+		"darkMode": false
+	}
+}

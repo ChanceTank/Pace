@@ -1,0 +1,51 @@
+:root {
+	--bg-color: #f0f0f0;
+	--text-color: #333;
+	--container-bg: white;
+	--shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-theme {
+	--bg-color: #333;
+	--text-color: #f0f0f0;
+	--container-bg: #444;
+	--shadow-color: rgba(255, 255, 255, 0.1);
+}
+
+body {
+	font-family: Arial, sans-serif;
+	margin: 20px;
+	background-color: var(--bg-color);
+	color: var(--text-color);
+	transition:
+		background-color 0.3s,
+		color 0.3s;
+}
+
+h1 {
+	color: var(--text-color);
+}
+
+.container {
+	max-width: 800px;
+	margin: 0 auto;
+	background-color: var(--container-bg);
+	padding: 20px;
+	border-radius: 8px;
+	box-shadow: 0 2px 4px var(--shadow-color);
+	transition:
+		background-color 0.3s,
+		box-shadow 0.3s;
+}
+
+.theme-toggle {
+	position: fixed;
+	top: 20px;
+	right: 20px;
+	padding: 10px;
+	background-color: var(--container-bg);
+	border: 1px solid var(--text-color);
+	border-radius: 5px;
+	cursor: pointer;
+	color: var(--text-color);
+}

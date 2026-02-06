@@ -1,0 +1,21 @@
+{
+	"name": "pace",
+	"version": "1.0.0",
+	"description": "A standalone Windows desktop app for social-frequency tracking",
+	"main": "src/main.js",
+	"scripts": {
+		"start": "electron .",
+		"make": "electron-forge make"
+	},
+	"author": "Your Name",
+	"license": "MIT",
+	"devDependencies": {
+		"electron": "^30.0.0",
+		"@electron-forge/cli": "^6.0.0",
+		"@electron-forge/maker-zip": "^6.0.0",
+		"electron-rebuild": "^3.2.9"
+	},
+	"dependencies": {
+		"sqlite3": "^5.0.0"
+		}	
+}
