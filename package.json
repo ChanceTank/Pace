@@ -2,7 +2,7 @@
 	"name": "pace",
 	"version": "1.0.0",
 	"description": "A standalone Windows desktop app for social-frequency tracking",
-	"main": "src/main.js",
+	"main": "frontend/main.js",
 	"scripts": {
 		"start": "electron .",
 		"make": "electron-forge make"
@@ -18,6 +18,8 @@
 	},
 	"dependencies": {
 		"better-sqlite3": "^12.6.2",
+		"cors": "^2.8.6",
+		"express": "^5.2.1",
 		"sqlite3": "^5.0.0"
 	},
 	"config": {

@@ -9,7 +9,3 @@ db/pace.db
 
 # Ignore logs
 logs/
-
-#Ignore files
-TODO.md
-
