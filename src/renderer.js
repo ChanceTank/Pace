@@ -1,5 +1,4 @@
 // Renderer process script for Pace app
-const { ipcRenderer } = require("electron");
 
 // Store data for filtering/search
 let allCircles = [];
@@ -76,6 +75,7 @@ function displayCircles(circles) {
 		<div class="card">
 			<div class="card-header">
 				<h3 class="card-title">${circle.name}</h3>
+				<button class="btn-delete" data-circle-id="${circle.id}" title="Delete circle">🗑️</button>
 			</div>
 			<div class="card-meta">
 				<strong>Frequency:</strong> Every ${circle.frequency_days} days
@@ -86,6 +86,18 @@ function displayCircles(circles) {
 		.join("");
 
 	display.innerHTML = circlesHtml;
+
+	// Add event listeners to delete buttons
+	display.querySelectorAll(".btn-delete[data-circle-id]").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const circleId = parseInt(btn.dataset.circleId);
+			const circleName = btn
+				.closest(".card")
+				.querySelector(".card-title").textContent;
+			confirmDelete(`circle "${circleName}"`, () => deleteCircle(circleId));
+		});
+	});
 }
 
 function displayFriends(friends) {
@@ -108,6 +120,9 @@ function displayFriends(friends) {
 		<div class="card">
 			<div class="card-header">
 				<h3 class="card-title">${friend.name}</h3>
+				<button class="btn-delete" data-friend-id="${friend.id}" title="Delete friend">🗑️</button>
+			</div>
+			<div class="card-header">
 				<span class="badge badge-${status.statusClass}">${status.statusText}</span>
 			</div>
 			<div class="card-meta">
@@ -121,6 +136,18 @@ function displayFriends(friends) {
 		.join("");
 
 	display.innerHTML = friendsHtml;
+
+	// Add event listeners to delete buttons
+	display.querySelectorAll(".btn-delete[data-friend-id]").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const friendId = parseInt(btn.dataset.friendId);
+			const friendName = btn
+				.closest(".card")
+				.querySelector(".card-title").textContent;
+			confirmDelete(`friend "${friendName}"`, () => deleteFriend(friendId));
+		});
+	});
 }
 
 function displayInteractions(interactions) {
@@ -148,6 +175,7 @@ function displayInteractions(interactions) {
 		<div class="card">
 			<div class="card-header">
 				<h3 class="card-title">${directionIcon} ${friend ? friend.name : "Unknown"}</h3>
+				<button class="btn-delete" data-interaction-id="${interaction.id}" title="Delete interaction">🗑️</button>
 			</div>
 			<div class="card-meta">
 				<strong>Date:</strong> ${dateStr}
@@ -159,6 +187,23 @@ function displayInteractions(interactions) {
 		.join("");
 
 	display.innerHTML = interactionsHtml;
+
+	// Add event listeners to delete buttons
+	display
+		.querySelectorAll(".btn-delete[data-interaction-id]")
+		.forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				const interactionId = parseInt(btn.dataset.interactionId);
+				const friendName = btn
+					.closest(".card")
+					.querySelector(".card-title")
+					.textContent.trim();
+				confirmDelete(`interaction with ${friendName}`, () =>
+					deleteInteraction(interactionId),
+				);
+			});
+		});
 }
 
 function updateStats() {
@@ -413,11 +458,66 @@ async function addInteraction(friendId, date, notes, direction) {
 			direction,
 		});
 		console.log("Added interaction:", newInteraction);
+
+		// Update friend's last contact if interaction is not in the future
+		const interactionDate = new Date(date);
+		const today = new Date();
+		if (interactionDate <= today) {
+			await window.electronAPI.updateFriendLastContact(friendId, date);
+		}
+
 		await loadInteractions(); // Refresh display
 		await loadFriends(); // Refresh friends to update last contact status
 		updateStats();
 	} catch (error) {
 		console.error("Error adding interaction:", error);
+	}
+}
+
+// Delete functions
+function confirmDelete(itemName, callback) {
+	const confirmed = confirm(
+		`Are you sure you want to delete ${itemName}? This action cannot be undone.`,
+	);
+	if (confirmed) {
+		callback();
+	}
+}
+
+async function deleteCircle(circleId) {
+	try {
+		await window.electronAPI.deleteCircle(circleId);
+		console.log("Deleted circle:", circleId);
+		document.getElementById("searchInput").value = ""; // Clear search
+		await loadCircles(); // Refresh display
+		await loadFriends(); // Refresh friends since circle is gone
+		updateStats();
+	} catch (error) {
+		console.error("Error deleting circle:", error);
+	}
+}
+
+async function deleteFriend(friendId) {
+	try {
+		await window.electronAPI.deleteFriend(friendId);
+		console.log("Deleted friend:", friendId);
+		document.getElementById("searchInput").value = ""; // Clear search
+		await loadFriends(); // Refresh display
+		await loadInteractions(); // Refresh interactions since friend is gone
+		updateStats();
+	} catch (error) {
+		console.error("Error deleting friend:", error);
+	}
+}
+
+async function deleteInteraction(interactionId) {
+	try {
+		await window.electronAPI.deleteInteraction(interactionId);
+		console.log("Deleted interaction:", interactionId);
+		await loadInteractions(); // Refresh display
+		updateStats();
+	} catch (error) {
+		console.error("Error deleting interaction:", error);
 	}
 }
 
@@ -464,6 +564,14 @@ function populateCircleSelect(circles) {
 		option.textContent = circle.name;
 		select.appendChild(option);
 	});
+
+	// Add listener to show friends in selected circle
+	select.addEventListener("change", async (e) => {
+		const circleId = e.target.value;
+		if (circleId) {
+			await displayFriendsInCircle(parseInt(circleId));
+		}
+	});
 }
 
 function populateFriendSelect(friends) {
@@ -475,6 +583,89 @@ function populateFriendSelect(friends) {
 		option.textContent = friend.name;
 		select.appendChild(option);
 	});
+
+	// Add listener to show interactions for selected friend
+	select.addEventListener("change", async (e) => {
+		const friendId = e.target.value;
+		if (friendId) {
+			await displayFriendInteractions(parseInt(friendId));
+		}
+	});
+}
+
+// Display friends in a selected circle
+async function displayFriendsInCircle(circleId) {
+	try {
+		const friends = await window.electronAPI.getFriendsByCircle(circleId);
+		const friendsList = document.createElement("div");
+		friendsList.className = "friends-in-circle";
+		friendsList.id = "friendsInCircle";
+
+		if (friends.length === 0) {
+			friendsList.innerHTML =
+				"<p style='color: #999; font-size: 0.9em;'>No friends yet in this circle</p>";
+		} else {
+			friendsList.innerHTML = `
+				<p style='color: #999; font-size: 0.9em;'><strong>Friends in this circle:</strong></p>
+				${friends
+					.map(
+						(f) =>
+							`<div style='padding: 5px; font-size: 0.9em;'>→ ${f.name}</div>`,
+					)
+					.join("")}
+			`;
+		}
+
+		// Remove old list if exists
+		const oldList = document.getElementById("friendsInCircle");
+		if (oldList) oldList.remove();
+
+		// Insert after the circle select
+		const select = document.getElementById("friendCircle");
+		select.parentNode.insertBefore(friendsList, select.nextSibling);
+	} catch (error) {
+		console.error("Error displaying friends in circle:", error);
+	}
+}
+
+// Display interactions for a selected friend
+async function displayFriendInteractions(friendId) {
+	try {
+		const interactions =
+			await window.electronAPI.getInteractionsByFriend(friendId);
+		const interactionsList = document.createElement("div");
+		interactionsList.className = "interactions-for-friend";
+		interactionsList.id = "interactionsForFriend";
+
+		if (interactions.length === 0) {
+			interactionsList.innerHTML =
+				"<p style='color: #999; font-size: 0.9em;'>No interactions yet with this friend</p>";
+		} else {
+			const friend = allFriends.find((f) => f.id === friendId);
+			const recentInteractions = interactions.slice(0, 3); // Show last 3
+			interactionsList.innerHTML = `
+				<p style='color: #999; font-size: 0.9em;'><strong>Recent interactions with ${friend ? friend.name : "this friend"}:</strong></p>
+				${recentInteractions
+					.map((i) => {
+						const directionIcon =
+							i.direction === "incoming" ? "📥" : "📤";
+						const dateStr = new Date(i.date).toLocaleDateString();
+						return `<div style='padding: 5px; font-size: 0.9em;'>${directionIcon} ${dateStr}</div>`;
+					})
+					.join("")}
+			`;
+		}
+
+		// Remove old list if exists
+		const oldList = document.getElementById("interactionsForFriend");
+		if (oldList) oldList.remove();
+
+		// Insert after the friend select
+		const select = document.getElementById("interactionFriend");
+		select.parentNode.insertBefore(interactionsList, select.nextSibling);
+	} catch (error) {
+		console.error("Error displaying friend interactions:", error);
+	}
 }
 
 // Expose functions to global scope for debugging (remove in production)

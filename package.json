@@ -17,6 +17,7 @@
 		"electron-rebuild": "^3.2.9"
 	},
 	"dependencies": {
+		"better-sqlite3": "^12.6.2",
 		"sqlite3": "^5.0.0"
 	},
 	"config": {

@@ -3,8 +3,13 @@
 node_modules/
 out/
 
-#Ignore the db
+# Ignore the db
 pace.db
+db/pace.db
 
-# Ignore files
+# Ignore logs
+logs/
+
+#Ignore files
 TODO.md
+
