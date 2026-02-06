@@ -1,7 +1,7 @@
 // Renderer process script for Pace app
 
-// API base URL
-const API_URL = "http://localhost:3000/api";
+// API base URL - Change this to your remote server URL when deploying
+const API_URL = "http://localhost:3000/api"; // For remote server, use: "https://your-server-domain.com/api"
 
 // Store data for filtering/search
 let allCircles = [];
@@ -121,7 +121,10 @@ function displayCircles(circles) {
 		<div class="card">
 			<div class="card-header">
 				<h3 class="card-title">${circle.name}</h3>
-				<button class="btn-delete" data-circle-id="${circle.id}" title="Delete circle">🗑️</button>
+				<div class="card-actions">
+					<button class="btn-edit" data-circle-id="${circle.id}" title="Edit circle">✏️</button>
+					<button class="btn-delete" data-circle-id="${circle.id}" title="Delete circle">🗑️</button>
+				</div>
 			</div>
 			<div class="card-meta">
 				<strong>Frequency:</strong> Every ${circle.frequency_days} days
@@ -132,6 +135,15 @@ function displayCircles(circles) {
 		.join("");
 
 	display.innerHTML = circlesHtml;
+
+	// Add event listeners to edit buttons
+	display.querySelectorAll(".btn-edit[data-circle-id]").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const circleId = parseInt(btn.dataset.circleId);
+			editCircle(circleId);
+		});
+	});
 
 	// Add event listeners to delete buttons
 	display.querySelectorAll(".btn-delete[data-circle-id]").forEach((btn) => {
@@ -166,7 +178,10 @@ function displayFriends(friends) {
 		<div class="card">
 			<div class="card-header">
 				<h3 class="card-title">${friend.name}</h3>
-				<button class="btn-delete" data-friend-id="${friend.id}" title="Delete friend">🗑️</button>
+				<div class="card-actions">
+					<button class="btn-edit" data-friend-id="${friend.id}" title="Edit friend">✏️</button>
+					<button class="btn-delete" data-friend-id="${friend.id}" title="Delete friend">🗑️</button>
+				</div>
 			</div>
 			<div class="card-header">
 				<span class="badge badge-${status.statusClass}">${status.statusText}</span>
@@ -182,6 +197,15 @@ function displayFriends(friends) {
 		.join("");
 
 	display.innerHTML = friendsHtml;
+
+	// Add event listeners to edit buttons
+	display.querySelectorAll(".btn-edit[data-friend-id]").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const friendId = parseInt(btn.dataset.friendId);
+			editFriend(friendId);
+		});
+	});
 
 	// Add event listeners to delete buttons
 	display.querySelectorAll(".btn-delete[data-friend-id]").forEach((btn) => {
@@ -738,6 +762,92 @@ async function addCircle(name, frequencyDays) {
 	}
 }
 
+async function editCircle(circleId) {
+	const circle = allCircles.find((c) => c.id === circleId);
+	if (!circle) return;
+
+	// Switch to circles tab
+	document
+		.querySelectorAll(".tab-btn")
+		.forEach((btn) => btn.classList.remove("active"));
+	document
+		.querySelectorAll(".tab-content")
+		.forEach((content) => content.classList.remove("active"));
+	document
+		.querySelector('[data-tab="circles-section"]')
+		.classList.add("active");
+	document.getElementById("circles-section").classList.add("active");
+
+	// Populate form
+	document.getElementById("circleName").value = circle.name;
+	document.getElementById("circleFrequency").value = circle.frequency_days;
+	document.getElementById("circleForm").dataset.editId = circleId;
+	document.querySelector("#circleForm button").textContent = "Update Circle";
+}
+
+async function editFriend(friendId) {
+	const friend = allFriends.find((f) => f.id === friendId);
+	if (!friend) return;
+
+	// Switch to friends tab
+	document
+		.querySelectorAll(".tab-btn")
+		.forEach((btn) => btn.classList.remove("active"));
+	document
+		.querySelectorAll(".tab-content")
+		.forEach((content) => content.classList.remove("active"));
+	document
+		.querySelector('[data-tab="friends-section"]')
+		.classList.add("active");
+	document.getElementById("friends-section").classList.add("active");
+
+	// Populate form
+	document.getElementById("friendName").value = friend.name;
+	document.getElementById("friendCircle").value = friend.circle_id;
+	document.getElementById("friendLastContact").value = friend.last_contact
+		? friend.last_contact.split("T")[0]
+		: "";
+	document.getElementById("friendForm").dataset.editId = friendId;
+	document.querySelector("#friendForm button").textContent = "Update Friend";
+}
+
+async function updateCircle(circleId, name, frequencyDays) {
+	try {
+		await apiCall(`/circles/${circleId}`, {
+			method: "PUT",
+			body: JSON.stringify({
+				name,
+				frequency_days: frequencyDays,
+			}),
+		});
+		document.getElementById("searchInput").value = "";
+		await loadCircles();
+		await loadFriends(); // In case circle changes affect friend status
+		updateStats();
+	} catch (error) {
+		console.error("Error updating circle:", error);
+	}
+}
+
+async function updateFriend(friendId, name, circleId, lastContact) {
+	try {
+		await apiCall(`/friends/${friendId}`, {
+			method: "PUT",
+			body: JSON.stringify({
+				name,
+				circle_id: circleId,
+				last_contact: lastContact,
+			}),
+		});
+		document.getElementById("searchInput").value = "";
+		await loadFriends();
+		await loadInteractions();
+		updateStats();
+	} catch (error) {
+		console.error("Error updating friend:", error);
+	}
+}
+
 async function addFriend(name, circleId, lastContact) {
 	try {
 		await apiCall("/friends", {
@@ -838,7 +948,15 @@ async function handleCircleForm(event) {
 	event.preventDefault();
 	const name = document.getElementById("circleName").value;
 	const frequency = parseInt(document.getElementById("circleFrequency").value);
-	await addCircle(name, frequency);
+	const editId = document.getElementById("circleForm").dataset.editId;
+
+	if (editId) {
+		await updateCircle(parseInt(editId), name, frequency);
+		delete document.getElementById("circleForm").dataset.editId;
+		document.querySelector("#circleForm button").textContent = "Add Circle";
+	} else {
+		await addCircle(name, frequency);
+	}
 	document.getElementById("circleForm").reset();
 }
 
@@ -848,7 +966,15 @@ async function handleFriendForm(event) {
 	const circleId = parseInt(document.getElementById("friendCircle").value);
 	const lastContact =
 		document.getElementById("friendLastContact").value || null;
-	await addFriend(name, circleId, lastContact);
+	const editId = document.getElementById("friendForm").dataset.editId;
+
+	if (editId) {
+		await updateFriend(parseInt(editId), name, circleId, lastContact);
+		delete document.getElementById("friendForm").dataset.editId;
+		document.querySelector("#friendForm button").textContent = "Add Friend";
+	} else {
+		await addFriend(name, circleId, lastContact);
+	}
 	document.getElementById("friendForm").reset();
 }
 

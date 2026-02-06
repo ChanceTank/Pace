@@ -2,6 +2,7 @@
 .*
 node_modules/
 out/
+TODO.md
 
 # Ignore the db
 pace.db

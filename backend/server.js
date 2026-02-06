@@ -64,6 +64,23 @@ app.post("/api/circles", (req, res) => {
 	}
 });
 
+app.put("/api/circles/:id", (req, res) => {
+	try {
+		const circleId = req.params.id;
+		const { name, frequency_days } = req.body;
+		if (!name || !frequency_days) {
+			return res.status(400).json({ error: "Missing required fields" });
+		}
+		const stmt = db.prepare(
+			"UPDATE circles SET name = ?, frequency_days = ? WHERE id = ?",
+		);
+		stmt.run(name, frequency_days, circleId);
+		res.json({ id: circleId, name, frequency_days });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
 app.delete("/api/circles/:id", (req, res) => {
 	try {
 		const circleId = req.params.id;
@@ -112,6 +129,23 @@ app.post("/api/friends", (req, res) => {
 		);
 		const info = stmt.run(name, circle_id, last_contact || null);
 		res.json({ id: info.lastInsertRowid, name, circle_id, last_contact });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.put("/api/friends/:id", (req, res) => {
+	try {
+		const friendId = req.params.id;
+		const { name, circle_id, last_contact } = req.body;
+		if (!name || !circle_id) {
+			return res.status(400).json({ error: "Missing required fields" });
+		}
+		const stmt = db.prepare(
+			"UPDATE friends SET name = ?, circle_id = ?, last_contact = ? WHERE id = ?",
+		);
+		stmt.run(name, circle_id, last_contact || null, friendId);
+		res.json({ id: friendId, name, circle_id, last_contact });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
@@ -197,6 +231,34 @@ app.post("/api/interactions", (req, res) => {
 		}
 
 		res.json({ id: info.lastInsertRowid, friend_id, date, notes, direction });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.put("/api/interactions/:id", (req, res) => {
+	try {
+		const interactionId = req.params.id;
+		const { friend_id, date, notes, direction } = req.body;
+		if (!friend_id || !date) {
+			return res.status(400).json({ error: "Missing required fields" });
+		}
+		const stmt = db.prepare(
+			"UPDATE interactions SET friend_id = ?, date = ?, notes = ?, direction = ? WHERE id = ?",
+		);
+		stmt.run(friend_id, date, notes || null, direction, interactionId);
+
+		// Update friend's last_contact if interaction is not in the future
+		const interactionDate = new Date(date);
+		const today = new Date();
+		if (interactionDate <= today) {
+			const updateStmt = db.prepare(
+				"UPDATE friends SET last_contact = ? WHERE id = ?",
+			);
+			updateStmt.run(date, friend_id);
+		}
+
+		res.json({ id: interactionId, friend_id, date, notes, direction });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}

@@ -5,7 +5,9 @@
 	"main": "frontend/main.js",
 	"scripts": {
 		"start": "electron .",
-		"make": "electron-forge make"
+		"make": "electron-forge make",
+		"test": "mocha tests/app.test.js",
+		"server": "node backend/server.js"
 	},
 	"author": "Your Name",
 	"license": "MIT",
@@ -13,8 +15,11 @@
 		"@electron-forge/cli": "^6.0.0",
 		"@electron-forge/maker-squirrel": "^6.4.2",
 		"@electron-forge/maker-zip": "^6.0.0",
+		"chai": "^4.3.7",
 		"electron": "^30.0.0",
-		"electron-rebuild": "^3.2.9"
+		"electron-rebuild": "^3.2.9",
+		"mocha": "^10.2.0",
+		"supertest": "^6.3.3"
 	},
 	"dependencies": {
 		"better-sqlite3": "^12.6.2",
