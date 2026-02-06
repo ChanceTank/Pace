@@ -1,6 +1,10 @@
 # Ignore folders
 .*
 node_modules/
+out/
+
+#Ignore the db
+pace.db
 
 # Ignore files
 TODO.md
