@@ -6,8 +6,12 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
-		"dev": "concurrently \"vite --no-open\" \"wait-on http://localhost:5173 && electron .\"",
-		"build": "tsc && vite build && electron-builder",
+		"dev-web-app": "set WEB_ONLY=true && vite --open",
+		"dev-electron-app": "wait-on http://localhost:5173 && electron .",
+		"dev-both-apps": "concurrently \"set WEB_ONLY=true && vite --open\" \"wait-on http://localhost:5173 && electron .\"",
+		"build-test": "tsc && vite build",
+		"build-release": "tsc && vite build && electron-builder",
+		"compileTS": "tsc",
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
 		"preview": "vite preview"
 	},

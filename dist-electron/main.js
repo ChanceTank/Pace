@@ -11,7 +11,7 @@ let win;
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
-    title: "Windows Electron App",
+    title: "Pace Electron App",
     webPreferences: {
       preload: path.join(MAIN_DIST, "preload.mjs")
     }

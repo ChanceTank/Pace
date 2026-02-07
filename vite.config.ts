@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [
     react(),
-    electron({
+    ...(process.env.WEB_ONLY ? [] : [electron({
       main: {
         // Shortcut of `build.lib.entry`.
         entry: 'electron/main.ts',
@@ -24,6 +24,6 @@ export default defineConfig({
         // https://github.com/electron-vite/vite-plugin-electron-renderer/issues/78#issuecomment-2053600808
         ? undefined
         : {},
-    }),
+    })]),
   ],
 })

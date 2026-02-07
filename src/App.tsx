@@ -10,6 +10,9 @@ function App() {
 		return (saved as "light" | "dark") || "light";
 	});
 
+	// Log IPC availability for debugging
+	console.log('isElectron:', window.isElectron, 'ipcRenderer available:', !!window.ipcRenderer);
+
 	useEffect(() => {
 		// Listen for theme toggle from main process
 		const listener = () => {
@@ -43,7 +46,7 @@ function App() {
 					<img src={reactLogo} className="logo react" alt="React logo" />
 				</a>
 			</div>
-			<h1 className="text-4xl font-bold">Web App</h1>
+			<h1 className="text-4xl font-bold">Welcome to Pace</h1>
 			<div className="card bg-gray-100 dark:bg-gray-800 p-4 rounded">
 				<button
 					onClick={() => setCount((count) => count + 1)}

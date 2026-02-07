@@ -22,3 +22,6 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   // You can expose other APIs you need here.
   // ...
 })
+
+// Expose a flag to indicate this is running in Electron
+contextBridge.exposeInMainWorld('isElectron', true)

@@ -20,3 +20,4 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
   // You can expose other APIs you need here.
   // ...
 });
+electron.contextBridge.exposeInMainWorld("isElectron", true);
