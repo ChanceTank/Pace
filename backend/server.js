@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const Database = require("better-sqlite3");
+const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 const fs = require("fs");
 
@@ -15,87 +15,108 @@ app.use(express.json());
 
 // Initialize database
 function initDatabase() {
-	const dbPath = path.join(__dirname, "./db/pace.db");
-	const schemaPath = path.join(__dirname, "./db/schema.sql");
+	return new Promise((resolve, reject) => {
+		const dbPath = path.join(__dirname, "./db/pace.db");
+		const schemaPath = path.join(__dirname, "./db/schema.sql");
 
-	// Ensure db directory exists
-	const dbDir = path.dirname(dbPath);
-	if (!fs.existsSync(dbDir)) {
-		fs.mkdirSync(dbDir, { recursive: true });
-	}
+		// Ensure db directory exists
+		const dbDir = path.dirname(dbPath);
+		if (!fs.existsSync(dbDir)) {
+			fs.mkdirSync(dbDir, { recursive: true });
+		}
 
-	try {
-		db = new Database(dbPath);
-		console.log("Connected to the SQLite database.");
+		db = new sqlite3.Database(dbPath, (err) => {
+			if (err) {
+				console.error("Error opening database:", err.message);
+				reject(err);
+				return;
+			}
+			console.log("Connected to the SQLite database.");
 
-		// Run schema
-		const schema = fs.readFileSync(schemaPath, "utf8");
-		db.exec(schema);
-		console.log("Database tables created.");
-	} catch (err) {
-		console.error("Error initializing database:", err.message);
-		throw err;
-	}
+			// Run schema
+			const schema = fs.readFileSync(schemaPath, "utf8");
+			db.exec(schema, (err) => {
+				if (err) {
+					console.error("Error creating tables:", err.message);
+					reject(err);
+					return;
+				}
+				console.log("Database tables created.");
+				resolve();
+			});
+		});
+	});
 }
 
 // === CIRCLES ENDPOINTS ===
 app.get("/api/circles", (req, res) => {
-	try {
-		const result = db.prepare("SELECT * FROM circles").all();
-		res.json(result);
-	} catch (err) {
-		res.status(500).json({ error: err.message });
-	}
+	db.all("SELECT * FROM circles", [], (err, rows) => {
+		if (err) {
+			res.status(500).json({ error: err.message });
+		} else {
+			res.json(rows);
+		}
+	});
 });
 
 app.post("/api/circles", (req, res) => {
-	try {
-		const { name, meeting_frequency } = req.body;
-		if (!name || !meeting_frequency) {
-			return res.status(400).json({ error: "Missing required fields" });
-		}
-		const stmt = db.prepare(
-			"INSERT INTO circles (name, meeting_frequency) VALUES (?, ?)",
-		);
-		const info = stmt.run(name, meeting_frequency);
-		res.json({ id: info.lastInsertRowid, name, meeting_frequency });
-	} catch (err) {
-		res.status(500).json({ error: err.message });
+	const { name, meeting_frequency } = req.body;
+	if (!name || !meeting_frequency) {
+		return res.status(400).json({ error: "Missing required fields" });
 	}
+	db.run(
+		"INSERT INTO circles (name, meeting_frequency) VALUES (?, ?)",
+		[name, meeting_frequency],
+		function (err) {
+			if (err) {
+				res.status(500).json({ error: err.message });
+			} else {
+				res.json({ id: this.lastID, name, meeting_frequency });
+			}
+		},
+	);
 });
 
 app.put("/api/circles/:id", (req, res) => {
-	try {
-		const circleId = req.params.id;
-		const { name, meeting_frequency } = req.body;
-		if (!name || !meeting_frequency) {
-			return res.status(400).json({ error: "Missing required fields" });
-		}
-		const stmt = db.prepare(
-			"UPDATE circles SET name = ?, meeting_frequency = ? WHERE id = ?",
-		);
-		stmt.run(name, meeting_frequency, circleId);
-		res.json({ id: circleId, name, meeting_frequency });
-	} catch (err) {
-		res.status(500).json({ error: err.message });
+	const circleId = req.params.id;
+	const { name, meeting_frequency } = req.body;
+	if (!name || !meeting_frequency) {
+		return res.status(400).json({ error: "Missing required fields" });
 	}
+	db.run(
+		"UPDATE circles SET name = ?, meeting_frequency = ? WHERE id = ?",
+		[name, meeting_frequency, circleId],
+		function (err) {
+			if (err) {
+				res.status(500).json({ error: err.message });
+			} else {
+				res.json({ id: circleId, name, meeting_frequency });
+			}
+		},
+	);
 });
 
 app.delete("/api/circles/:id", (req, res) => {
-	try {
-		const circleId = req.params.id;
-		// Delete all person_circles in this circle first
-		const deleteStmt = db.prepare(
-			"DELETE FROM person_circles WHERE circle_id = ?",
-		);
-		deleteStmt.run(circleId);
-		// Then delete the circle
-		const stmt = db.prepare("DELETE FROM circles WHERE id = ?");
-		stmt.run(circleId);
-		res.json({ id: circleId, deleted: true });
-	} catch (err) {
-		res.status(500).json({ error: err.message });
-	}
+	const circleId = req.params.id;
+	// Delete all person_circles in this circle first
+	db.run(
+		"DELETE FROM person_circles WHERE circle_id = ?",
+		[circleId],
+		function (err) {
+			if (err) {
+				res.status(500).json({ error: err.message });
+				return;
+			}
+			// Then delete the circle
+			db.run("DELETE FROM circles WHERE id = ?", [circleId], function (err) {
+				if (err) {
+					res.status(500).json({ error: err.message });
+				} else {
+					res.json({ id: circleId, deleted: true });
+				}
+			});
+		},
+	);
 });
 
 // === PEOPLE ENDPOINTS ===
@@ -648,11 +669,16 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-function startServer() {
-	initDatabase();
-	app.listen(PORT, () => {
-		console.log(`🚀 REST API server running on http://localhost:${PORT}`);
-	});
+async function startServer() {
+	try {
+		await initDatabase();
+		app.listen(PORT, () => {
+			console.log(`🚀 REST API server running on http://localhost:${PORT}`);
+		});
+	} catch (err) {
+		console.error("Failed to start server:", err);
+		process.exit(1);
+	}
 }
 
 // Export for use in main.js
