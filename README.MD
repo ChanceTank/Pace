@@ -28,21 +28,53 @@ Most social tracking happens in our heads or buried in text history. **Pace** br
 
 * **Framework:** [Electron](https://www.electronjs.org/) (Desktop GUI)
 
-* **Database:** [SQLite3](https://sqlite.org/) (via `sqlite3`)
+* **Frontend:** [React](https://reactjs.org/)
+
+* **Backend:** [Express](https://expressjs.com/)
+
+* **Database:** [SQLite3](https://sqlite.org/) (via `better-sqlite3`)
 
 * **Build Tool:** [Electron Forge](https://www.electronforge.io/)
+
+* **Testing:** [Mocha](https://mochajs.org/) with [Chai](https://www.chaijs.com/)
 
 ---
 
 ## 📊 Database Schema (Preview)
 
-As a local-first SQL app, the data integrity is built on:
+As a local-first SQL app, the data integrity is built on the following tables:
 
-* `circles`: Defines the "templates" for social frequency (name, frequency in days).
+* `people`: Stores individual contacts (name, birthday, anniversary, preferred communication, profile picture).
 
-* `friends`: The individuals mapped to specific circles (name, circle association, last contact date).
+* `circles`: Defines social frequency templates (name, meeting frequency).
 
-* `interactions`: A log of every interaction (friend, date, notes).
+* `covenant_types`: Types of social covenants or commitments (name, description).
+
+* `checkins`: Logs of interactions with people (person_id, duration, notes, summary feeling, topics, next followup date).
+
+* `groups`: Social groups (name, description, meeting frequency).
+
+* `action_items`: Tasks or follow-ups from checkins (person_id, description, due date, status).
+
+* `tags`: Custom tags for categorization.
+
+* Linking tables: `person_tags`, `person_groups`, `person_circles`, `person_covenant_types`, `checkin_tags`, `action_item_tags`, `checkin_covenant_types` for many-to-many relationships.
+
+---
+
+## 🔌 API Endpoints
+
+The application provides a REST API for managing social data. The server runs locally on port 3000. Key endpoints include:
+
+* **Circles:** `/api/circles` (GET, POST, PUT, DELETE)
+* **People:** `/api/people` (GET, POST, PUT, DELETE)
+* **Checkins:** `/api/checkins` (GET, POST, PUT, DELETE), `/api/checkins/person/:personId` (GET)
+* **Groups:** `/api/groups` (GET, POST, PUT, DELETE)
+* **Action Items:** `/api/action_items` (GET, POST, PUT, DELETE)
+* **Covenant Types:** `/api/covenant_types` (GET, POST, PUT, DELETE)
+* **Tags:** `/api/tags` (GET, POST, PUT, DELETE)
+
+All endpoints support standard CRUD operations with JSON payloads.
 
 ---
 
@@ -80,7 +112,23 @@ npm start
 
 ```
 
-4\. Build the Windows executable:
+4\. (Optional) Run the backend server separately for development:
+
+```bash
+
+npm run server
+
+```
+
+5\. Run tests:
+
+```bash
+
+npm test
+
+```
+
+6\. Build the Windows executable:
 
 ```bash
 
