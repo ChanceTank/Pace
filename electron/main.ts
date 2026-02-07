@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from 'electron'
+import { app, BrowserWindow, Menu, MenuItemConstructorOptions } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -26,8 +26,9 @@ let win: BrowserWindow | null
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    title: 'Windows Electron App',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'),
+      preload: path.join(MAIN_DIST, 'preload.mjs'),
     },
   })
 
@@ -120,7 +121,7 @@ function createWindow() {
       ]
     }
   ]
-  const menu = Menu.buildFromTemplate(menuTemplate as any)
+  const menu = Menu.buildFromTemplate(menuTemplate as MenuItemConstructorOptions[])
   Menu.setApplicationMenu(menu)
 
   // Test active push message to Renderer-process.

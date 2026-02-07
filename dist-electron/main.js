@@ -11,8 +11,9 @@ let win;
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+    title: "Windows Electron App",
     webPreferences: {
-      preload: path.join(__dirname$1, "preload.mjs")
+      preload: path.join(MAIN_DIST, "preload.mjs")
     }
   });
   win.setMenuBarVisibility(true);
