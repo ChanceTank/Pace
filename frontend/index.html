@@ -6,12 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pace - Social Frequency Tracker</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 
 <body>
-    <div id="pageContainer"></div>
+    <div id="root"></div>
 
-    <script src="./renderer.js"></script>
+    <script type="text/babel" src="./utils/api.js"></script>
+    <script type="text/babel" src="./components/Dashboard.jsx"></script>
+    <script type="text/babel" src="./components/People.jsx"></script>
+    <script type="text/babel" src="./components/Circles.jsx"></script>
+    <script type="text/babel" src="./components/Checkins.jsx"></script>
+    <script type="text/babel" src="./components/Groups.jsx"></script>
+    <script type="text/babel" src="./components/ActionItems.jsx"></script>
+    <script type="text/babel" src="./components/CovenantTypes.jsx"></script>
+    <script type="text/babel" src="./components/Tags.jsx"></script>
+    <script type="text/babel" src="./App.jsx"></script>
 </body>
 
 </html>

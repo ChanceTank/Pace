@@ -27,7 +27,7 @@ function createWindow() {
 	createMenu();
 
 	// Open the DevTools (optional)
-	// mainWindow.webContents.openDevTools();
+	mainWindow.webContents.openDevTools();
 }
 
 function createMenu() {
