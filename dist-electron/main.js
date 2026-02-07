@@ -1,23 +1,20 @@
-import { app, BrowserWindow, Menu } from "electron";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
-const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
-process.env.APP_ROOT = path.join(__dirname$1, "..");
-const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
-const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-let win;
-function createWindow() {
-  win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+import { app as l, BrowserWindow as n, Menu as r } from "electron";
+import { fileURLToPath as p } from "node:url";
+import o from "node:path";
+const m = o.dirname(p(import.meta.url));
+process.env.APP_ROOT = o.join(m, "..");
+const t = process.env.VITE_DEV_SERVER_URL, d = o.join(process.env.APP_ROOT, "dist-electron"), s = o.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = t ? o.join(process.env.APP_ROOT, "public") : s;
+let e;
+function a() {
+  e = new n({
+    icon: o.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     title: "Pace Electron App",
     webPreferences: {
-      preload: path.join(MAIN_DIST, "preload.mjs")
+      preload: o.join(d, "preload.mjs")
     }
-  });
-  win.setMenuBarVisibility(true);
-  const menuTemplate = [
+  }), e.setMenuBarVisibility(!0);
+  const c = [
     {
       label: "File",
       submenu: [
@@ -25,7 +22,7 @@ function createWindow() {
           label: "Exit",
           accelerator: "CmdOrCtrl+Q",
           click: () => {
-            app.quit();
+            l.quit();
           }
         }
       ]
@@ -49,21 +46,21 @@ function createWindow() {
           label: "Reload",
           accelerator: "CmdOrCtrl+R",
           click: () => {
-            win == null ? void 0 : win.webContents.reload();
+            e == null || e.webContents.reload();
           }
         },
         {
           label: "Force Reload",
           accelerator: "CmdOrCtrl+Shift+R",
           click: () => {
-            win == null ? void 0 : win.webContents.reloadIgnoringCache();
+            e == null || e.webContents.reloadIgnoringCache();
           }
         },
         {
           label: "Toggle Developer Tools",
           accelerator: "F12",
           click: () => {
-            win == null ? void 0 : win.webContents.toggleDevTools();
+            e == null || e.webContents.toggleDevTools();
           }
         },
         { type: "separator" },
@@ -71,8 +68,7 @@ function createWindow() {
           label: "Toggle Theme",
           accelerator: "CmdOrCtrl+T",
           click: () => {
-            console.log("Toggle Theme clicked");
-            win == null ? void 0 : win.webContents.send("toggle-theme");
+            console.log("Toggle Theme clicked"), e == null || e.webContents.send("toggle-theme");
           }
         },
         { type: "separator" },
@@ -100,34 +96,22 @@ function createWindow() {
         }
       ]
     }
-  ];
-  const menu = Menu.buildFromTemplate(menuTemplate);
-  Menu.setApplicationMenu(menu);
-  win.webContents.on("did-finish-load", () => {
-    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  });
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
-  } else {
-    win.loadFile(path.join(RENDERER_DIST, "index.html"));
-  }
+  ], i = r.buildFromTemplate(c);
+  r.setApplicationMenu(i), e.webContents.on("did-finish-load", () => {
+    e == null || e.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  }), t ? e.loadURL(t) : e.loadFile(o.join(s, "index.html"));
 }
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-    win = null;
-  }
+l.on("window-all-closed", () => {
+  process.platform !== "darwin" && (l.quit(), e = null);
 });
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+l.on("activate", () => {
+  n.getAllWindows().length === 0 && a();
 });
-app.whenReady().then(() => {
-  createWindow();
+l.whenReady().then(() => {
+  a();
 });
 export {
-  MAIN_DIST,
-  RENDERER_DIST,
-  VITE_DEV_SERVER_URL
+  d as MAIN_DIST,
+  s as RENDERER_DIST,
+  t as VITE_DEV_SERVER_URL
 };

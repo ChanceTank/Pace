@@ -1,42 +1,121 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+	max-width: 1280px;
+	margin: 0 auto;
+	padding: 2rem;
+	text-align: center;
 }
 
 .logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+	height: 6em;
+	padding: 1.5em;
+	will-change: filter;
+	transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+	filter: drop-shadow(0 0 2em #646cffaa);
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+	filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
 @keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+	a:nth-of-type(2) .logo {
+		animation: logo-spin infinite 20s linear;
+	}
 }
 
 .card {
-  padding: 2em;
+	padding: 2em;
 }
 
 .read-the-docs {
-  color: #888;
+	color: #888;
+}
+
+.form {
+	max-width: 400px;
+	margin: 0 auto;
+	padding: 1rem;
+	border: 1px solid #ccc;
+	border-radius: 8px;
+	background-color: #f9f9f9;
+}
+
+.dark .form {
+	border-color: #555;
+	background-color: #333;
+}
+
+.form div {
+	margin-bottom: 1rem;
+}
+
+.form label {
+	display: block;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: #374151;
+}
+
+.dark .form label {
+	color: #fff;
+}
+
+.form input,
+.form textarea {
+	margin-top: 0.25rem;
+	display: block;
+	width: 100%;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid #d1d5db;
+	border-radius: 0.375rem;
+	box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	outline: none;
+	background-color: #fff;
+	color: #000;
+	box-sizing: border-box;
+}
+
+.form input:focus,
+.form textarea:focus {
+	border-color: #3b82f6;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dark .form input,
+.dark .form textarea {
+	background-color: #374151;
+	border-color: #4b5563;
+	color: #fff;
+}
+
+.form button {
+	background-color: #10b981;
+	color: #fff;
+	font-weight: bold;
+	padding: 0.5rem 1rem;
+	border-radius: 0.375rem;
+	border: none;
+	cursor: pointer;
+}
+
+.form button:hover {
+	background-color: #059669;
+}
+
+.dark .form button {
+	background-color: #059669;
+}
+
+.dark .form button:hover {
+	background-color: #047857;
 }

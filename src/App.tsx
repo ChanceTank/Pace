@@ -9,9 +9,19 @@ function App() {
 		const saved = localStorage.getItem("theme");
 		return (saved as "light" | "dark") || "light";
 	});
+	const [formData, setFormData] = useState({
+		name: "",
+		email: "",
+		message: "",
+	});
 
 	// Log IPC availability for debugging
-	console.log('isElectron:', window.isElectron, 'ipcRenderer available:', !!window.ipcRenderer);
+	console.log(
+		"isElectron:",
+		window.isElectron,
+		"ipcRenderer available:",
+		!!window.ipcRenderer,
+	);
 
 	useEffect(() => {
 		// Listen for theme toggle from main process
@@ -35,6 +45,12 @@ function App() {
 		document.documentElement.classList.toggle("dark", theme === "dark");
 		localStorage.setItem("theme", theme);
 	}, [theme]);
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		console.log("Form submitted:", formData);
+		setFormData({ name: "", email: "", message: "" });
+	};
 
 	return (
 		<div className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white transition-colors">
@@ -69,6 +85,49 @@ function App() {
 					and save to test HMR
 				</p>
 			</div>
+			<form onSubmit={handleSubmit} className="form">
+				<div>
+					<label htmlFor="name">Name</label>
+					<input
+						type="text"
+						id="name"
+						value={formData.name}
+						onChange={(e) =>
+							setFormData({ ...formData, name: e.target.value })
+						}
+						required
+					/>
+				</div>
+				<div>
+					<label htmlFor="email">Email</label>
+					<input
+						type="email"
+						id="email"
+						value={formData.email}
+						onChange={(e) =>
+							setFormData({ ...formData, email: e.target.value })
+						}
+						required
+					/>
+				</div>
+				<div className="mb-4">
+					<label
+						htmlFor="message"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+						Message
+					</label>
+					<textarea
+						id="message"
+						value={formData.message}
+						onChange={(e) =>
+							setFormData({ ...formData, message: e.target.value })
+						}
+
+						rows={4}
+						required></textarea>
+				</div>
+				<button type="submit">Submit</button>
+			</form>
 			<p className="read-the-docs text-gray-600 dark:text-gray-400">
 				Click on the Vite and React logos to learn more
 			</p>
