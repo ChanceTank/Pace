@@ -50,17 +50,17 @@ describe("Pace App API", () => {
 
 		app.post("/api/circles", (req, res) => {
 			try {
-				const { name, frequency_days } = req.body;
-				if (!name || !frequency_days) {
+				const { name, meeting_frequency } = req.body;
+				if (!name || !meeting_frequency) {
 					return res
 						.status(400)
 						.json({ error: "Missing required fields" });
 				}
 				const stmt = db.prepare(
-					"INSERT INTO circles (name, frequency_days) VALUES (?, ?)",
+					"INSERT INTO circles (name, meeting_frequency) VALUES (?, ?)",
 				);
-				const info = stmt.run(name, frequency_days);
-				res.json({ id: info.lastInsertRowid, name, frequency_days });
+				const info = stmt.run(name, meeting_frequency);
+				res.json({ id: info.lastInsertRowid, name, meeting_frequency });
 			} catch (err) {
 				res.status(500).json({ error: err.message });
 			}
@@ -69,20 +69,20 @@ describe("Pace App API", () => {
 		app.put("/api/circles/:id", (req, res) => {
 			try {
 				const circleId = req.params.id;
-				const { name, frequency_days } = req.body;
-				if (!name || !frequency_days) {
+				const { name, meeting_frequency } = req.body;
+				if (!name || !meeting_frequency) {
 					return res
 						.status(400)
 						.json({ error: "Missing required fields" });
 				}
 				const stmt = db.prepare(
-					"UPDATE circles SET name = ?, frequency_days = ? WHERE id = ?",
+					"UPDATE circles SET name = ?, meeting_frequency = ? WHERE id = ?",
 				);
-				const info = stmt.run(name, frequency_days, circleId);
+				const info = stmt.run(name, meeting_frequency, circleId);
 				if (info.changes === 0) {
 					return res.status(404).json({ error: "Circle not found" });
 				}
-				res.json({ id: circleId, name, frequency_days });
+				res.json({ id: circleId, name, meeting_frequency });
 			} catch (err) {
 				res.status(500).json({ error: err.message });
 			}
@@ -91,9 +91,9 @@ describe("Pace App API", () => {
 		app.delete("/api/circles/:id", (req, res) => {
 			try {
 				const circleId = req.params.id;
-				// Delete all friends in this circle first
+				// Delete all person_circles in this circle first
 				const deleteStmt = db.prepare(
-					"DELETE FROM friends WHERE circle_id = ?",
+					"DELETE FROM person_circles WHERE circle_id = ?",
 				);
 				deleteStmt.run(circleId);
 				// Then delete the circle
@@ -105,140 +105,213 @@ describe("Pace App API", () => {
 			}
 		});
 
-		// === FRIENDS ENDPOINTS ===
-		app.get("/api/friends", (req, res) => {
+		// === PEOPLE ENDPOINTS ===
+		app.get("/api/people", (req, res) => {
 			try {
-				const result = db.prepare("SELECT * FROM friends").all();
+				const result = db.prepare("SELECT * FROM people").all();
 				res.json(result);
 			} catch (err) {
 				res.status(500).json({ error: err.message });
 			}
 		});
 
-		app.post("/api/friends", (req, res) => {
+		app.post("/api/people", (req, res) => {
 			try {
-				const { name, circle_id, last_contact } = req.body;
-				if (!name || !circle_id) {
+				const {
+					name,
+					birthday,
+					anniversary,
+					preferred_communication,
+					profile_picture,
+				} = req.body;
+				if (!name) {
 					return res
 						.status(400)
 						.json({ error: "Missing required fields" });
 				}
 				const stmt = db.prepare(
-					"INSERT INTO friends (name, circle_id, last_contact) VALUES (?, ?, ?)",
+					"INSERT INTO people (name, birthday, anniversary, preferred_communication, profile_picture) VALUES (?, ?, ?, ?, ?)",
 				);
-				const info = stmt.run(name, circle_id, last_contact);
+				const info = stmt.run(
+					name,
+					birthday || null,
+					anniversary || null,
+					preferred_communication || null,
+					profile_picture || null,
+				);
 				res.json({
 					id: info.lastInsertRowid,
 					name,
-					circle_id,
-					last_contact,
+					birthday,
+					anniversary,
+					preferred_communication,
+					profile_picture,
 				});
 			} catch (err) {
 				res.status(500).json({ error: err.message });
 			}
 		});
 
-		app.put("/api/friends/:id", (req, res) => {
+		app.put("/api/people/:id", (req, res) => {
 			try {
-				const friendId = req.params.id;
-				const { name, circle_id, last_contact } = req.body;
-				if (!name || !circle_id) {
+				const personId = req.params.id;
+				const {
+					name,
+					birthday,
+					anniversary,
+					preferred_communication,
+					profile_picture,
+				} = req.body;
+				if (!name) {
 					return res
 						.status(400)
 						.json({ error: "Missing required fields" });
 				}
 				const stmt = db.prepare(
-					"UPDATE friends SET name = ?, circle_id = ?, last_contact = ? WHERE id = ?",
+					"UPDATE people SET name = ?, birthday = ?, anniversary = ?, preferred_communication = ?, profile_picture = ?, last_modified_date = CURRENT_TIMESTAMP WHERE id = ?",
 				);
-				const info = stmt.run(name, circle_id, last_contact, friendId);
+				const info = stmt.run(
+					name,
+					birthday || null,
+					anniversary || null,
+					preferred_communication || null,
+					profile_picture || null,
+					personId,
+				);
 				if (info.changes === 0) {
-					return res.status(404).json({ error: "Friend not found" });
+					return res.status(404).json({ error: "Person not found" });
 				}
-				res.json({ id: friendId, name, circle_id, last_contact });
+				res.json({
+					id: personId,
+					name,
+					birthday,
+					anniversary,
+					preferred_communication,
+					profile_picture,
+				});
 			} catch (err) {
 				res.status(500).json({ error: err.message });
 			}
 		});
 
-		app.delete("/api/friends/:id", (req, res) => {
+		app.delete("/api/people/:id", (req, res) => {
 			try {
-				const friendId = req.params.id;
-				const stmt = db.prepare("DELETE FROM friends WHERE id = ?");
-				stmt.run(friendId);
-				res.json({ id: friendId, deleted: true });
+				const personId = req.params.id;
+				const stmt = db.prepare("DELETE FROM people WHERE id = ?");
+				stmt.run(personId);
+				res.json({ id: personId, deleted: true });
 			} catch (err) {
 				res.status(500).json({ error: err.message });
 			}
 		});
 
-		// === INTERACTIONS ENDPOINTS ===
-		app.get("/api/interactions", (req, res) => {
+		// === CHECKINS ENDPOINTS ===
+		app.get("/api/checkins", (req, res) => {
 			try {
-				const result = db.prepare("SELECT * FROM interactions").all();
+				const result = db.prepare("SELECT * FROM checkins").all();
 				res.json(result);
 			} catch (err) {
 				res.status(500).json({ error: err.message });
 			}
 		});
 
-		app.post("/api/interactions", (req, res) => {
+		app.post("/api/checkins", (req, res) => {
 			try {
-				const { friend_id, date, notes, direction = "outgoing" } = req.body;
-				if (!friend_id || !date) {
+				const {
+					person_id,
+					duration,
+					type_id,
+					notes,
+					summary_feeling,
+					topics_discussed,
+					next_followup_date,
+				} = req.body;
+				if (!person_id) {
 					return res
 						.status(400)
 						.json({ error: "Missing required fields" });
 				}
 				const stmt = db.prepare(
-					"INSERT INTO interactions (friend_id, date, notes, direction) VALUES (?, ?, ?, ?)",
+					"INSERT INTO checkins (person_id, duration, type_id, notes, summary_feeling, topics_discussed, next_followup_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
 				);
-				const info = stmt.run(friend_id, date, notes || null, direction);
+				const info = stmt.run(
+					person_id,
+					duration || null,
+					type_id || null,
+					notes || null,
+					summary_feeling || null,
+					topics_discussed || null,
+					next_followup_date || null,
+				);
 				res.json({
 					id: info.lastInsertRowid,
-					friend_id,
-					date,
+					person_id,
+					duration,
+					type_id,
 					notes,
-					direction,
+					summary_feeling,
+					topics_discussed,
+					next_followup_date,
 				});
 			} catch (err) {
 				res.status(500).json({ error: err.message });
 			}
 		});
 
-		app.put("/api/interactions/:id", (req, res) => {
+		app.put("/api/checkins/:id", (req, res) => {
 			try {
-				const interactionId = req.params.id;
-				const { friend_id, date, notes, direction } = req.body;
-				if (!friend_id || !date) {
+				const checkinId = req.params.id;
+				const {
+					person_id,
+					duration,
+					type_id,
+					notes,
+					summary_feeling,
+					topics_discussed,
+					next_followup_date,
+				} = req.body;
+				if (!person_id) {
 					return res
 						.status(400)
 						.json({ error: "Missing required fields" });
 				}
 				const stmt = db.prepare(
-					"UPDATE interactions SET friend_id = ?, date = ?, notes = ?, direction = ? WHERE id = ?",
+					"UPDATE checkins SET person_id = ?, duration = ?, type_id = ?, notes = ?, summary_feeling = ?, topics_discussed = ?, next_followup_date = ?, last_modified_date = CURRENT_TIMESTAMP WHERE id = ?",
 				);
 				const info = stmt.run(
-					friend_id,
-					date,
+					person_id,
+					duration || null,
+					type_id || null,
 					notes || null,
-					direction,
-					interactionId,
+					summary_feeling || null,
+					topics_discussed || null,
+					next_followup_date || null,
+					checkinId,
 				);
 				if (info.changes === 0) {
-					return res.status(404).json({ error: "Interaction not found" });
+					return res.status(404).json({ error: "Checkin not found" });
 				}
-				res.json({ id: interactionId, friend_id, date, notes, direction });
+				res.json({
+					id: checkinId,
+					person_id,
+					duration,
+					type_id,
+					notes,
+					summary_feeling,
+					topics_discussed,
+					next_followup_date,
+				});
 			} catch (err) {
 				res.status(500).json({ error: err.message });
 			}
 		});
 
-		app.delete("/api/interactions/:id", (req, res) => {
+		app.delete("/api/checkins/:id", (req, res) => {
 			try {
-				const interactionId = req.params.id;
-				const stmt = db.prepare("DELETE FROM interactions WHERE id = ?");
-				stmt.run(interactionId);
-				res.json({ id: interactionId, deleted: true });
+				const checkinId = req.params.id;
+				const stmt = db.prepare("DELETE FROM checkins WHERE id = ?");
+				stmt.run(checkinId);
+				res.json({ id: checkinId, deleted: true });
 			} catch (err) {
 				res.status(500).json({ error: err.message });
 			}
@@ -280,13 +353,13 @@ describe("Pace App API", () => {
 		it("should create a circle", (done) => {
 			request(app)
 				.post("/api/circles")
-				.send({ name: "Test Circle", frequency_days: 7 })
+				.send({ name: "Test Circle", meeting_frequency: "Weekly" })
 				.expect(200)
 				.end((err, res) => {
 					if (err) return done(err);
 					expect(res.body).to.have.property("id");
 					expect(res.body.name).to.equal("Test Circle");
-					expect(res.body.frequency_days).to.equal(7);
+					expect(res.body.meeting_frequency).to.equal("Weekly");
 					circleId = res.body.id;
 					done();
 				});
@@ -307,12 +380,12 @@ describe("Pace App API", () => {
 		it("should update a circle", (done) => {
 			request(app)
 				.put(`/api/circles/${circleId}`)
-				.send({ name: "Updated Circle", frequency_days: 14 })
+				.send({ name: "Updated Circle", meeting_frequency: "Bi-weekly" })
 				.expect(200)
 				.end((err, res) => {
 					if (err) return done(err);
 					expect(res.body.name).to.equal("Updated Circle");
-					expect(res.body.frequency_days).to.equal(14);
+					expect(res.body.meeting_frequency).to.equal("Bi-weekly");
 					done();
 				});
 		});
@@ -329,15 +402,15 @@ describe("Pace App API", () => {
 		});
 	});
 
-	describe("Friends CRUD", () => {
-		let friendId;
+	describe("People CRUD", () => {
+		let personId;
 		let circleId;
 
 		before((done) => {
-			// Create a circle for friend tests
+			// Create a circle for people tests
 			request(app)
 				.post("/api/circles")
-				.send({ name: "Friend Test Circle", frequency_days: 7 })
+				.send({ name: "People Test Circle", meeting_frequency: "Weekly" })
 				.expect(200)
 				.end((err, res) => {
 					if (err) return done(err);
@@ -346,27 +419,26 @@ describe("Pace App API", () => {
 				});
 		});
 
-		it("should create a friend", (done) => {
+		it("should create a person", (done) => {
 			request(app)
-				.post("/api/friends")
+				.post("/api/people")
 				.send({
-					name: "Test Friend",
-					circle_id: circleId,
-					last_contact: "2023-01-01",
+					name: "Test Person",
+					birthday: "1990-01-01",
 				})
 				.expect(200)
 				.end((err, res) => {
 					if (err) return done(err);
 					expect(res.body).to.have.property("id");
-					expect(res.body.name).to.equal("Test Friend");
-					friendId = res.body.id;
+					expect(res.body.name).to.equal("Test Person");
+					personId = res.body.id;
 					done();
 				});
 		});
 
-		it("should get all friends", (done) => {
+		it("should get all people", (done) => {
 			request(app)
-				.get("/api/friends")
+				.get("/api/people")
 				.expect(200)
 				.end((err, res) => {
 					if (err) return done(err);
@@ -376,25 +448,24 @@ describe("Pace App API", () => {
 				});
 		});
 
-		it("should update a friend", (done) => {
+		it("should update a person", (done) => {
 			request(app)
-				.put(`/api/friends/${friendId}`)
+				.put(`/api/people/${personId}`)
 				.send({
-					name: "Updated Friend",
-					circle_id: circleId,
-					last_contact: "2023-01-02",
+					name: "Updated Person",
+					birthday: "1990-01-02",
 				})
 				.expect(200)
 				.end((err, res) => {
 					if (err) return done(err);
-					expect(res.body.name).to.equal("Updated Friend");
+					expect(res.body.name).to.equal("Updated Person");
 					done();
 				});
 		});
 
-		it("should delete a friend", (done) => {
+		it("should delete a person", (done) => {
 			request(app)
-				.delete(`/api/friends/${friendId}`)
+				.delete(`/api/people/${personId}`)
 				.expect(200)
 				.end((err, res) => {
 					if (err) return done(err);
@@ -404,57 +475,55 @@ describe("Pace App API", () => {
 		});
 	});
 
-	describe("Interactions CRUD", () => {
-		let interactionId;
-		let friendId;
+	describe("Checkins CRUD", () => {
+		let checkinId;
+		let personId;
 		let circleId;
 
 		before((done) => {
-			// Create circle and friend for interaction tests
+			// Create circle and person for checkin tests
 			request(app)
 				.post("/api/circles")
-				.send({ name: "Interaction Test Circle", frequency_days: 7 })
+				.send({ name: "Checkin Test Circle", meeting_frequency: "Weekly" })
 				.expect(200)
 				.end((err, res) => {
 					circleId = res.body.id;
 					request(app)
-						.post("/api/friends")
+						.post("/api/people")
 						.send({
-							name: "Interaction Test Friend",
-							circle_id: circleId,
-							last_contact: "2023-01-01",
+							name: "Checkin Test Person",
+							birthday: "1990-01-01",
 						})
 						.expect(200)
 						.end((err2, res2) => {
 							if (err2) return done(err2);
-							friendId = res2.body.id;
+							personId = res2.body.id;
 							done();
 						});
 				});
 		});
 
-		it("should create an interaction", (done) => {
+		it("should create a checkin", (done) => {
 			request(app)
-				.post("/api/interactions")
+				.post("/api/checkins")
 				.send({
-					friend_id: friendId,
-					date: "2023-01-15",
-					notes: "Test interaction",
-					direction: "outgoing",
+					person_id: personId,
+					notes: "Test checkin",
+					duration: "30 minutes",
 				})
 				.expect(200)
 				.end((err, res) => {
 					if (err) return done(err);
 					expect(res.body).to.have.property("id");
-					expect(res.body.notes).to.equal("Test interaction");
-					interactionId = res.body.id;
+					expect(res.body.notes).to.equal("Test checkin");
+					checkinId = res.body.id;
 					done();
 				});
 		});
 
-		it("should get all interactions", (done) => {
+		it("should get all checkins", (done) => {
 			request(app)
-				.get("/api/interactions")
+				.get("/api/checkins")
 				.expect(200)
 				.end((err, res) => {
 					if (err) return done(err);
@@ -464,27 +533,25 @@ describe("Pace App API", () => {
 				});
 		});
 
-		it("should update an interaction", (done) => {
+		it("should update a checkin", (done) => {
 			request(app)
-				.put(`/api/interactions/${interactionId}`)
+				.put(`/api/checkins/${checkinId}`)
 				.send({
-					friend_id: friendId,
-					date: "2023-01-16",
-					notes: "Updated interaction",
-					direction: "incoming",
+					person_id: personId,
+					notes: "Updated checkin",
+					duration: "1 hour",
 				})
 				.expect(200)
 				.end((err, res) => {
 					if (err) return done(err);
-					expect(res.body.notes).to.equal("Updated interaction");
-					expect(res.body.direction).to.equal("incoming");
+					expect(res.body.notes).to.equal("Updated checkin");
 					done();
 				});
 		});
 
-		it("should delete an interaction", (done) => {
+		it("should delete a checkin", (done) => {
 			request(app)
-				.delete(`/api/interactions/${interactionId}`)
+				.delete(`/api/checkins/${checkinId}`)
 				.expect(200)
 				.end((err, res) => {
 					if (err) return done(err);

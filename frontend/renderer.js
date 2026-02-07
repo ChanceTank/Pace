@@ -5,8 +5,12 @@ const API_URL = "http://localhost:3000/api"; // For remote server, use: "https:/
 
 // Store data for filtering/search
 let allCircles = [];
-let allFriends = [];
-let allInteractions = [];
+let allPeople = [];
+let allCheckins = [];
+let allGroups = [];
+let allActionItems = [];
+let allCovenantTypes = [];
+let allTags = [];
 
 // Theme toggle function
 function toggleTheme() {
@@ -55,8 +59,12 @@ async function initApp() {
 	try {
 		// Load initial data
 		await loadCircles();
-		await loadFriends();
-		await loadInteractions();
+		await loadPeople();
+		await loadCheckins();
+		await loadGroups();
+		await loadActionItems();
+		await loadCovenantTypes();
+		await loadTags();
 
 		// Apply saved theme
 		const savedTheme = localStorage.getItem("theme");
@@ -88,22 +96,58 @@ async function loadCircles() {
 	}
 }
 
-async function loadFriends() {
+async function loadPeople() {
 	try {
-		allFriends = await apiCall("/friends");
-		displayFriends(allFriends);
-		populateFriendSelect(allFriends);
+		allPeople = await apiCall("/people");
+		displayPeople(allPeople);
+		populatePersonSelect(allPeople);
 	} catch (error) {
-		console.error("Error loading friends:", error);
+		console.error("Error loading people:", error);
 	}
 }
 
-async function loadInteractions() {
+async function loadCheckins() {
 	try {
-		allInteractions = await apiCall("/interactions");
-		displayInteractions(allInteractions);
+		allCheckins = await apiCall("/checkins");
+		displayCheckins(allCheckins);
 	} catch (error) {
-		console.error("Error loading interactions:", error);
+		console.error("Error loading checkins:", error);
+	}
+}
+
+async function loadGroups() {
+	try {
+		allGroups = await apiCall("/groups");
+		displayGroups(allGroups);
+	} catch (error) {
+		console.error("Error loading groups:", error);
+	}
+}
+
+async function loadActionItems() {
+	try {
+		allActionItems = await apiCall("/action_items");
+		displayActionItems(allActionItems);
+	} catch (error) {
+		console.error("Error loading action items:", error);
+	}
+}
+
+async function loadCovenantTypes() {
+	try {
+		allCovenantTypes = await apiCall("/covenant_types");
+		displayCovenantTypes(allCovenantTypes);
+	} catch (error) {
+		console.error("Error loading covenant types:", error);
+	}
+}
+
+async function loadTags() {
+	try {
+		allTags = await apiCall("/tags");
+		displayTags(allTags);
+	} catch (error) {
+		console.error("Error loading tags:", error);
 	}
 }
 
@@ -158,64 +202,316 @@ function displayCircles(circles) {
 	});
 }
 
-function displayFriends(friends) {
-	const display = document.getElementById("friendsDisplay");
-	if (friends.length === 0) {
+function displayPeople(people) {
+	const display = document.getElementById("peopleDisplay");
+	if (people.length === 0) {
 		display.innerHTML =
-			"<p style='grid-column: 1 / -1; text-align: center; color: #999;'>No friends yet. Add your first friend!</p>";
+			"<p style='grid-column: 1 / -1; text-align: center; color: #999;'>No people yet. Add your first person!</p>";
 		return;
 	}
 
-	const friendsHtml = friends
-		.map((friend) => {
-			const status = calculateFriendStatus(friend);
-			const lastContactDate = friend.last_contact
-				? new Date(friend.last_contact).toLocaleDateString()
-				: "Never";
-			const circle = allCircles.find((c) => c.id === friend.circle_id);
-
+	const peopleHtml = people
+		.map((person) => {
 			return `
 		<div class="card">
 			<div class="card-header">
-				<h3 class="card-title">${friend.name}</h3>
+				<h3 class="card-title">${person.name}</h3>
 				<div class="card-actions">
-					<button class="btn-edit" data-friend-id="${friend.id}" title="Edit friend">✏️</button>
-					<button class="btn-delete" data-friend-id="${friend.id}" title="Delete friend">🗑️</button>
+					<button class="btn-edit" data-person-id="${person.id}" title="Edit person">✏️</button>
+					<button class="btn-delete" data-person-id="${person.id}" title="Delete person">🗑️</button>
 				</div>
 			</div>
-			<div class="card-header">
-				<span class="badge badge-${status.statusClass}">${status.statusText}</span>
-			</div>
 			<div class="card-meta">
-				<strong>Circle:</strong> ${circle ? circle.name : "Unknown"}<br>
-				<strong>Last Contact:</strong> ${lastContactDate}<br>
-				<strong>Days Since:</strong> ${status.daysSince}
+				<strong>Birthday:</strong> ${person.birthday || "N/A"}<br>
+				<strong>Anniversary:</strong> ${person.anniversary || "N/A"}<br>
+				<strong>Preferred Communication:</strong> ${person.preferred_communication || "N/A"}
 			</div>
 		</div>
 	`;
 		})
 		.join("");
 
-	display.innerHTML = friendsHtml;
+	display.innerHTML = peopleHtml;
 
 	// Add event listeners to edit buttons
-	display.querySelectorAll(".btn-edit[data-friend-id]").forEach((btn) => {
+	display.querySelectorAll(".btn-edit[data-person-id]").forEach((btn) => {
 		btn.addEventListener("click", (e) => {
 			e.stopPropagation();
-			const friendId = parseInt(btn.dataset.friendId);
-			editFriend(friendId);
+			const personId = parseInt(btn.dataset.personId);
+			editPerson(personId);
 		});
 	});
 
 	// Add event listeners to delete buttons
-	display.querySelectorAll(".btn-delete[data-friend-id]").forEach((btn) => {
+	display.querySelectorAll(".btn-delete[data-person-id]").forEach((btn) => {
 		btn.addEventListener("click", (e) => {
 			e.stopPropagation();
-			const friendId = parseInt(btn.dataset.friendId);
-			const friendName = btn
+			const personId = parseInt(btn.dataset.personId);
+			const personName = btn
 				.closest(".card")
 				.querySelector(".card-title").textContent;
-			confirmDelete(`friend "${friendName}"`, () => deleteFriend(friendId));
+			confirmDelete(`person "${personName}"`, () => deletePerson(personId));
+		});
+	});
+}
+
+function displayCheckins(checkins) {
+	const display = document.getElementById("checkinsDisplay");
+	if (checkins.length === 0) {
+		display.innerHTML =
+			"<p style='grid-column: 1 / -1; text-align: center; color: #999;'>No checkins yet. Log your first checkin!</p>";
+		return;
+	}
+
+	const checkinsHtml = checkins
+		.slice(0, 12) // Show last 12 checkins
+		.map((checkin) => {
+			const person = allPeople.find((p) => p.id === checkin.person_id);
+			const dateStr = new Date(checkin.creation_date).toLocaleDateString();
+
+			return `
+		<div class="card">
+			<div class="card-header">
+				<h3 class="card-title">${person ? person.name : "Unknown"}</h3>
+				<button class="btn-delete" data-checkin-id="${checkin.id}" title="Delete checkin">🗑️</button>
+			</div>
+			<div class="card-meta">
+				<strong>Date:</strong> ${dateStr}<br>
+				<strong>Duration:</strong> ${checkin.duration || "N/A"}<br>
+				<strong>Feeling:</strong> ${checkin.summary_feeling || "N/A"}
+			</div>
+			${checkin.notes ? `<div class="card-notes">"${checkin.notes}"</div>` : ""}
+		</div>
+	`;
+		})
+		.join("");
+
+	display.innerHTML = checkinsHtml;
+
+	// Add event listeners to delete buttons
+	display.querySelectorAll(".btn-delete[data-checkin-id]").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const checkinId = parseInt(btn.dataset.checkinId);
+			const personName = btn
+				.closest(".card")
+				.querySelector(".card-title")
+				.textContent.trim();
+			confirmDelete(`checkin with ${personName}`, () =>
+				deleteCheckin(checkinId),
+			);
+		});
+	});
+}
+
+function displayGroups(groups) {
+	const display = document.getElementById("groupsDisplay");
+	if (groups.length === 0) {
+		display.innerHTML =
+			"<p style='grid-column: 1 / -1; text-align: center; color: #999;'>No groups yet. Add your first group!</p>";
+		return;
+	}
+
+	const groupsHtml = groups
+		.map((group) => {
+			return `
+		<div class="card">
+			<div class="card-header">
+				<h3 class="card-title">${group.name}</h3>
+				<div class="card-actions">
+					<button class="btn-edit" data-group-id="${group.id}" title="Edit group">✏️</button>
+					<button class="btn-delete" data-group-id="${group.id}" title="Delete group">🗑️</button>
+				</div>
+			</div>
+			<div class="card-meta">
+				<strong>Description:</strong> ${group.description || "N/A"}<br>
+				<strong>Meeting Frequency:</strong> ${group.meeting_frequency}
+			</div>
+		</div>
+	`;
+		})
+		.join("");
+
+	display.innerHTML = groupsHtml;
+
+	// Add event listeners to edit buttons
+	display.querySelectorAll(".btn-edit[data-group-id]").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const groupId = parseInt(btn.dataset.groupId);
+			editGroup(groupId);
+		});
+	});
+
+	// Add event listeners to delete buttons
+	display.querySelectorAll(".btn-delete[data-group-id]").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const groupId = parseInt(btn.dataset.groupId);
+			const groupName = btn
+				.closest(".card")
+				.querySelector(".card-title").textContent;
+			confirmDelete(`group "${groupName}"`, () => deleteGroup(groupId));
+		});
+	});
+}
+
+function displayActionItems(actionItems) {
+	const display = document.getElementById("actionItemsDisplay");
+	if (actionItems.length === 0) {
+		display.innerHTML =
+			"<p style='grid-column: 1 / -1; text-align: center; color: #999;'>No action items yet.</p>";
+		return;
+	}
+
+	const actionItemsHtml = actionItems
+		.map((item) => {
+			const person = allPeople.find((p) => p.id === item.person_id);
+			return `
+		<div class="card">
+			<div class="card-header">
+				<h3 class="card-title">${item.description}</h3>
+				<div class="card-actions">
+					<button class="btn-edit" data-action-item-id="${item.id}" title="Edit action item">✏️</button>
+					<button class="btn-delete" data-action-item-id="${item.id}" title="Delete action item">🗑️</button>
+				</div>
+			</div>
+			<div class="card-meta">
+				<strong>Person:</strong> ${person ? person.name : "N/A"}<br>
+				<strong>Due Date:</strong> ${item.due_date || "N/A"}<br>
+				<strong>Status:</strong> ${item.status}
+			</div>
+		</div>
+	`;
+		})
+		.join("");
+
+	display.innerHTML = actionItemsHtml;
+
+	// Add event listeners
+	display.querySelectorAll(".btn-edit[data-action-item-id]").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const actionItemId = parseInt(btn.dataset.actionItemId);
+			editActionItem(actionItemId);
+		});
+	});
+
+	display
+		.querySelectorAll(".btn-delete[data-action-item-id]")
+		.forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				const actionItemId = parseInt(btn.dataset.actionItemId);
+				const description = btn
+					.closest(".card")
+					.querySelector(".card-title").textContent;
+				confirmDelete(`action item "${description}"`, () =>
+					deleteActionItem(actionItemId),
+				);
+			});
+		});
+}
+
+function displayCovenantTypes(covenantTypes) {
+	const display = document.getElementById("covenantTypesDisplay");
+	if (covenantTypes.length === 0) {
+		display.innerHTML =
+			"<p style='grid-column: 1 / -1; text-align: center; color: #999;'>No covenant types yet. Add your first covenant type!</p>";
+		return;
+	}
+
+	const covenantTypesHtml = covenantTypes
+		.map((type) => {
+			return `
+		<div class="card">
+			<div class="card-header">
+				<h3 class="card-title">${type.name}</h3>
+				<div class="card-actions">
+					<button class="btn-edit" data-covenant-type-id="${type.id}" title="Edit covenant type">✏️</button>
+					<button class="btn-delete" data-covenant-type-id="${type.id}" title="Delete covenant type">🗑️</button>
+				</div>
+			</div>
+			<div class="card-meta">
+				<strong>Description:</strong> ${type.description || "N/A"}
+			</div>
+		</div>
+	`;
+		})
+		.join("");
+
+	display.innerHTML = covenantTypesHtml;
+
+	// Add event listeners
+	display
+		.querySelectorAll(".btn-edit[data-covenant-type-id]")
+		.forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				const covenantTypeId = parseInt(btn.dataset.covenantTypeId);
+				editCovenantType(covenantTypeId);
+			});
+		});
+
+	display
+		.querySelectorAll(".btn-delete[data-covenant-type-id]")
+		.forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				const covenantTypeId = parseInt(btn.dataset.covenantTypeId);
+				const name = btn
+					.closest(".card")
+					.querySelector(".card-title").textContent;
+				confirmDelete(`covenant type "${name}"`, () =>
+					deleteCovenantType(covenantTypeId),
+				);
+			});
+		});
+}
+
+function displayTags(tags) {
+	const display = document.getElementById("tagsDisplay");
+	if (tags.length === 0) {
+		display.innerHTML =
+			"<p style='grid-column: 1 / -1; text-align: center; color: #999;'>No tags yet. Add your first tag!</p>";
+		return;
+	}
+
+	const tagsHtml = tags
+		.map((tag) => {
+			return `
+		<div class="card">
+			<div class="card-header">
+				<h3 class="card-title">${tag.tag}</h3>
+				<div class="card-actions">
+					<button class="btn-edit" data-tag-id="${tag.id}" title="Edit tag">✏️</button>
+					<button class="btn-delete" data-tag-id="${tag.id}" title="Delete tag">🗑️</button>
+				</div>
+			</div>
+		</div>
+	`;
+		})
+		.join("");
+
+	display.innerHTML = tagsHtml;
+
+	// Add event listeners
+	display.querySelectorAll(".btn-edit[data-tag-id]").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const tagId = parseInt(btn.dataset.tagId);
+			editTag(tagId);
+		});
+	});
+
+	display.querySelectorAll(".btn-delete[data-tag-id]").forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const tagId = parseInt(btn.dataset.tagId);
+			const tagName = btn
+				.closest(".card")
+				.querySelector(".card-title").textContent;
+			confirmDelete(`tag "${tagName}"`, () => deleteTag(tagId));
 		});
 	});
 }

@@ -50,15 +50,15 @@ app.get("/api/circles", (req, res) => {
 
 app.post("/api/circles", (req, res) => {
 	try {
-		const { name, frequency_days } = req.body;
-		if (!name || !frequency_days) {
+		const { name, meeting_frequency } = req.body;
+		if (!name || !meeting_frequency) {
 			return res.status(400).json({ error: "Missing required fields" });
 		}
 		const stmt = db.prepare(
-			"INSERT INTO circles (name, frequency_days) VALUES (?, ?)",
+			"INSERT INTO circles (name, meeting_frequency) VALUES (?, ?)",
 		);
-		const info = stmt.run(name, frequency_days);
-		res.json({ id: info.lastInsertRowid, name, frequency_days });
+		const info = stmt.run(name, meeting_frequency);
+		res.json({ id: info.lastInsertRowid, name, meeting_frequency });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
@@ -67,15 +67,15 @@ app.post("/api/circles", (req, res) => {
 app.put("/api/circles/:id", (req, res) => {
 	try {
 		const circleId = req.params.id;
-		const { name, frequency_days } = req.body;
-		if (!name || !frequency_days) {
+		const { name, meeting_frequency } = req.body;
+		if (!name || !meeting_frequency) {
 			return res.status(400).json({ error: "Missing required fields" });
 		}
 		const stmt = db.prepare(
-			"UPDATE circles SET name = ?, frequency_days = ? WHERE id = ?",
+			"UPDATE circles SET name = ?, meeting_frequency = ? WHERE id = ?",
 		);
-		stmt.run(name, frequency_days, circleId);
-		res.json({ id: circleId, name, frequency_days });
+		stmt.run(name, meeting_frequency, circleId);
+		res.json({ id: circleId, name, meeting_frequency });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
@@ -84,8 +84,10 @@ app.put("/api/circles/:id", (req, res) => {
 app.delete("/api/circles/:id", (req, res) => {
 	try {
 		const circleId = req.params.id;
-		// Delete all friends in this circle first
-		const deleteStmt = db.prepare("DELETE FROM friends WHERE circle_id = ?");
+		// Delete all person_circles in this circle first
+		const deleteStmt = db.prepare(
+			"DELETE FROM person_circles WHERE circle_id = ?",
+		);
 		deleteStmt.run(circleId);
 		// Then delete the circle
 		const stmt = db.prepare("DELETE FROM circles WHERE id = ?");
@@ -96,180 +98,544 @@ app.delete("/api/circles/:id", (req, res) => {
 	}
 });
 
-// === FRIENDS ENDPOINTS ===
-app.get("/api/friends", (req, res) => {
+// === PEOPLE ENDPOINTS ===
+app.get("/api/people", (req, res) => {
 	try {
-		const result = db.prepare("SELECT * FROM friends").all();
+		const result = db.prepare("SELECT * FROM people").all();
 		res.json(result);
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
 });
 
-app.get("/api/friends/circle/:circleId", (req, res) => {
+app.post("/api/people", (req, res) => {
 	try {
-		const circleId = req.params.circleId;
-		const result = db
-			.prepare("SELECT * FROM friends WHERE circle_id = ? ORDER BY name")
-			.all(circleId);
-		res.json(result);
-	} catch (err) {
-		res.status(500).json({ error: err.message });
-	}
-});
-
-app.post("/api/friends", (req, res) => {
-	try {
-		const { name, circle_id, last_contact } = req.body;
-		if (!name || !circle_id) {
+		const {
+			name,
+			birthday,
+			anniversary,
+			preferred_communication,
+			profile_picture,
+		} = req.body;
+		if (!name) {
 			return res.status(400).json({ error: "Missing required fields" });
 		}
 		const stmt = db.prepare(
-			"INSERT INTO friends (name, circle_id, last_contact) VALUES (?, ?, ?)",
+			"INSERT INTO people (name, birthday, anniversary, preferred_communication, profile_picture) VALUES (?, ?, ?, ?, ?)",
 		);
-		const info = stmt.run(name, circle_id, last_contact || null);
-		res.json({ id: info.lastInsertRowid, name, circle_id, last_contact });
+		const info = stmt.run(
+			name,
+			birthday || null,
+			anniversary || null,
+			preferred_communication || null,
+			profile_picture || null,
+		);
+		res.json({
+			id: info.lastInsertRowid,
+			name,
+			birthday,
+			anniversary,
+			preferred_communication,
+			profile_picture,
+		});
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
 });
 
-app.put("/api/friends/:id", (req, res) => {
+app.put("/api/people/:id", (req, res) => {
 	try {
-		const friendId = req.params.id;
-		const { name, circle_id, last_contact } = req.body;
-		if (!name || !circle_id) {
+		const personId = req.params.id;
+		const {
+			name,
+			birthday,
+			anniversary,
+			preferred_communication,
+			profile_picture,
+		} = req.body;
+		if (!name) {
 			return res.status(400).json({ error: "Missing required fields" });
 		}
 		const stmt = db.prepare(
-			"UPDATE friends SET name = ?, circle_id = ?, last_contact = ? WHERE id = ?",
+			"UPDATE people SET name = ?, birthday = ?, anniversary = ?, preferred_communication = ?, profile_picture = ?, last_modified_date = CURRENT_TIMESTAMP WHERE id = ?",
 		);
-		stmt.run(name, circle_id, last_contact || null, friendId);
-		res.json({ id: friendId, name, circle_id, last_contact });
+		stmt.run(
+			name,
+			birthday || null,
+			anniversary || null,
+			preferred_communication || null,
+			profile_picture || null,
+			personId,
+		);
+		res.json({
+			id: personId,
+			name,
+			birthday,
+			anniversary,
+			preferred_communication,
+			profile_picture,
+		});
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
 });
 
-app.put("/api/friends/:id/last-contact", (req, res) => {
+app.delete("/api/people/:id", (req, res) => {
 	try {
-		const friendId = req.params.id;
-		const { date } = req.body;
-		if (!date) {
-			return res.status(400).json({ error: "Missing date field" });
-		}
-		const stmt = db.prepare(
-			"UPDATE friends SET last_contact = ? WHERE id = ?",
+		const personId = req.params.id;
+		// Delete related records first
+		const deleteCheckins = db.prepare(
+			"DELETE FROM checkins WHERE person_id = ?",
 		);
-		stmt.run(date, friendId);
-		res.json({ id: friendId, last_contact: date });
+		deleteCheckins.run(personId);
+		const deletePersonTags = db.prepare(
+			"DELETE FROM person_tags WHERE person_id = ?",
+		);
+		deletePersonTags.run(personId);
+		const deletePersonGroups = db.prepare(
+			"DELETE FROM person_groups WHERE person_id = ?",
+		);
+		deletePersonGroups.run(personId);
+		const deletePersonCircles = db.prepare(
+			"DELETE FROM person_circles WHERE person_id = ?",
+		);
+		deletePersonCircles.run(personId);
+		const deletePersonCovenants = db.prepare(
+			"DELETE FROM person_covenant_types WHERE person_id = ?",
+		);
+		deletePersonCovenants.run(personId);
+		const deleteActionItems = db.prepare(
+			"DELETE FROM action_items WHERE person_id = ?",
+		);
+		deleteActionItems.run(personId);
+		// Then delete the person
+		const stmt = db.prepare("DELETE FROM people WHERE id = ?");
+		stmt.run(personId);
+		res.json({ id: personId, deleted: true });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
 });
 
-app.delete("/api/friends/:id", (req, res) => {
+// === CHECKINS ENDPOINTS ===
+app.get("/api/checkins", (req, res) => {
 	try {
-		const friendId = req.params.id;
-		// Delete all interactions for this friend first
-		const deleteInteractions = db.prepare(
-			"DELETE FROM interactions WHERE friend_id = ?",
-		);
-		deleteInteractions.run(friendId);
-		// Then delete the friend
-		const stmt = db.prepare("DELETE FROM friends WHERE id = ?");
-		stmt.run(friendId);
-		res.json({ id: friendId, deleted: true });
-	} catch (err) {
-		res.status(500).json({ error: err.message });
-	}
-});
-
-// === INTERACTIONS ENDPOINTS ===
-app.get("/api/interactions", (req, res) => {
-	try {
-		const result = db.prepare("SELECT * FROM interactions").all();
+		const result = db.prepare("SELECT * FROM checkins").all();
 		res.json(result);
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
 });
 
-app.get("/api/interactions/friend/:friendId", (req, res) => {
+app.get("/api/checkins/person/:personId", (req, res) => {
 	try {
-		const friendId = req.params.friendId;
+		const personId = req.params.personId;
 		const result = db
 			.prepare(
-				"SELECT * FROM interactions WHERE friend_id = ? ORDER BY date DESC",
+				"SELECT * FROM checkins WHERE person_id = ? ORDER BY creation_date DESC",
 			)
-			.all(friendId);
+			.all(personId);
 		res.json(result);
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
 });
 
-app.post("/api/interactions", (req, res) => {
+app.post("/api/checkins", (req, res) => {
 	try {
-		const { friend_id, date, notes, direction = "outgoing" } = req.body;
-		if (!friend_id || !date) {
+		const {
+			person_id,
+			duration,
+			type_id,
+			notes,
+			summary_feeling,
+			topics_discussed,
+			next_followup_date,
+		} = req.body;
+		if (!person_id) {
 			return res.status(400).json({ error: "Missing required fields" });
 		}
 		const stmt = db.prepare(
-			"INSERT INTO interactions (friend_id, date, notes, direction) VALUES (?, ?, ?, ?)",
+			"INSERT INTO checkins (person_id, duration, type_id, notes, summary_feeling, topics_discussed, next_followup_date) VALUES (?, ?, ?, ?, ?, ?, ?)",
 		);
-		const info = stmt.run(friend_id, date, notes || null, direction);
-
-		// Update friend's last_contact if interaction is not in the future
-		const interactionDate = new Date(date);
-		const today = new Date();
-		if (interactionDate <= today) {
-			const updateStmt = db.prepare(
-				"UPDATE friends SET last_contact = ? WHERE id = ?",
-			);
-			updateStmt.run(date, friend_id);
-		}
-
-		res.json({ id: info.lastInsertRowid, friend_id, date, notes, direction });
+		const info = stmt.run(
+			person_id,
+			duration || null,
+			type_id || null,
+			notes || null,
+			summary_feeling || null,
+			topics_discussed || null,
+			next_followup_date || null,
+		);
+		res.json({
+			id: info.lastInsertRowid,
+			person_id,
+			duration,
+			type_id,
+			notes,
+			summary_feeling,
+			topics_discussed,
+			next_followup_date,
+		});
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
 });
 
-app.put("/api/interactions/:id", (req, res) => {
+app.put("/api/checkins/:id", (req, res) => {
 	try {
-		const interactionId = req.params.id;
-		const { friend_id, date, notes, direction } = req.body;
-		if (!friend_id || !date) {
+		const checkinId = req.params.id;
+		const {
+			person_id,
+			duration,
+			type_id,
+			notes,
+			summary_feeling,
+			topics_discussed,
+			next_followup_date,
+		} = req.body;
+		if (!person_id) {
 			return res.status(400).json({ error: "Missing required fields" });
 		}
 		const stmt = db.prepare(
-			"UPDATE interactions SET friend_id = ?, date = ?, notes = ?, direction = ? WHERE id = ?",
+			"UPDATE checkins SET person_id = ?, duration = ?, type_id = ?, notes = ?, summary_feeling = ?, topics_discussed = ?, next_followup_date = ?, last_modified_date = CURRENT_TIMESTAMP WHERE id = ?",
 		);
-		stmt.run(friend_id, date, notes || null, direction, interactionId);
-
-		// Update friend's last_contact if interaction is not in the future
-		const interactionDate = new Date(date);
-		const today = new Date();
-		if (interactionDate <= today) {
-			const updateStmt = db.prepare(
-				"UPDATE friends SET last_contact = ? WHERE id = ?",
-			);
-			updateStmt.run(date, friend_id);
-		}
-
-		res.json({ id: interactionId, friend_id, date, notes, direction });
+		stmt.run(
+			person_id,
+			duration || null,
+			type_id || null,
+			notes || null,
+			summary_feeling || null,
+			topics_discussed || null,
+			next_followup_date || null,
+			checkinId,
+		);
+		res.json({
+			id: checkinId,
+			person_id,
+			duration,
+			type_id,
+			notes,
+			summary_feeling,
+			topics_discussed,
+			next_followup_date,
+		});
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
 });
 
-app.delete("/api/interactions/:id", (req, res) => {
+app.delete("/api/checkins/:id", (req, res) => {
 	try {
-		const interactionId = req.params.id;
-		const stmt = db.prepare("DELETE FROM interactions WHERE id = ?");
-		stmt.run(interactionId);
-		res.json({ id: interactionId, deleted: true });
+		const checkinId = req.params.id;
+		// Delete related action items first
+		const deleteActionItems = db.prepare(
+			"DELETE FROM action_items WHERE checkin_id = ?",
+		);
+		deleteActionItems.run(checkinId);
+		const deleteCheckinTags = db.prepare(
+			"DELETE FROM checkin_tags WHERE checkin_id = ?",
+		);
+		deleteCheckinTags.run(checkinId);
+		const deleteCheckinCovenants = db.prepare(
+			"DELETE FROM checkin_covenant_types WHERE checkin_id = ?",
+		);
+		deleteCheckinCovenants.run(checkinId);
+		// Then delete the checkin
+		const stmt = db.prepare("DELETE FROM checkins WHERE id = ?");
+		stmt.run(checkinId);
+		res.json({ id: checkinId, deleted: true });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+// === GROUPS ENDPOINTS ===
+app.get("/api/groups", (req, res) => {
+	try {
+		const result = db.prepare("SELECT * FROM groups").all();
+		res.json(result);
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.post("/api/groups", (req, res) => {
+	try {
+		const { name, description, meeting_frequency } = req.body;
+		if (!name || !meeting_frequency) {
+			return res.status(400).json({ error: "Missing required fields" });
+		}
+		const stmt = db.prepare(
+			"INSERT INTO groups (name, description, meeting_frequency) VALUES (?, ?, ?)",
+		);
+		const info = stmt.run(name, description || null, meeting_frequency);
+		res.json({
+			id: info.lastInsertRowid,
+			name,
+			description,
+			meeting_frequency,
+		});
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.put("/api/groups/:id", (req, res) => {
+	try {
+		const groupId = req.params.id;
+		const { name, description, meeting_frequency } = req.body;
+		if (!name || !meeting_frequency) {
+			return res.status(400).json({ error: "Missing required fields" });
+		}
+		const stmt = db.prepare(
+			"UPDATE groups SET name = ?, description = ?, meeting_frequency = ?, last_modified_date = CURRENT_TIMESTAMP WHERE id = ?",
+		);
+		stmt.run(name, description || null, meeting_frequency, groupId);
+		res.json({ id: groupId, name, description, meeting_frequency });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.delete("/api/groups/:id", (req, res) => {
+	try {
+		const groupId = req.params.id;
+		// Delete related person_groups first
+		const deleteStmt = db.prepare(
+			"DELETE FROM person_groups WHERE group_id = ?",
+		);
+		deleteStmt.run(groupId);
+		// Then delete the group
+		const stmt = db.prepare("DELETE FROM groups WHERE id = ?");
+		stmt.run(groupId);
+		res.json({ id: groupId, deleted: true });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+// === ACTION ITEMS ENDPOINTS ===
+app.get("/api/action_items", (req, res) => {
+	try {
+		const result = db.prepare("SELECT * FROM action_items").all();
+		res.json(result);
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.post("/api/action_items", (req, res) => {
+	try {
+		const { checkin_id, person_id, description, due_date, status } = req.body;
+		if (!person_id || !description) {
+			return res.status(400).json({ error: "Missing required fields" });
+		}
+		const stmt = db.prepare(
+			"INSERT INTO action_items (checkin_id, person_id, description, due_date, status) VALUES (?, ?, ?, ?, ?)",
+		);
+		const info = stmt.run(
+			checkin_id || null,
+			person_id,
+			description,
+			due_date || null,
+			status || "Pending",
+		);
+		res.json({
+			id: info.lastInsertRowid,
+			checkin_id,
+			person_id,
+			description,
+			due_date,
+			status,
+		});
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.put("/api/action_items/:id", (req, res) => {
+	try {
+		const actionItemId = req.params.id;
+		const {
+			checkin_id,
+			person_id,
+			description,
+			due_date,
+			completed_date,
+			status,
+		} = req.body;
+		if (!person_id || !description) {
+			return res.status(400).json({ error: "Missing required fields" });
+		}
+		const stmt = db.prepare(
+			"UPDATE action_items SET checkin_id = ?, person_id = ?, description = ?, due_date = ?, completed_date = ?, status = ?, last_modified_date = CURRENT_TIMESTAMP WHERE id = ?",
+		);
+		stmt.run(
+			checkin_id || null,
+			person_id,
+			description,
+			due_date || null,
+			completed_date || null,
+			status || "Pending",
+			actionItemId,
+		);
+		res.json({
+			id: actionItemId,
+			checkin_id,
+			person_id,
+			description,
+			due_date,
+			completed_date,
+			status,
+		});
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.delete("/api/action_items/:id", (req, res) => {
+	try {
+		const actionItemId = req.params.id;
+		// Delete related action_item_tags first
+		const deleteStmt = db.prepare(
+			"DELETE FROM action_item_tags WHERE action_item_id = ?",
+		);
+		deleteStmt.run(actionItemId);
+		// Then delete the action item
+		const stmt = db.prepare("DELETE FROM action_items WHERE id = ?");
+		stmt.run(actionItemId);
+		res.json({ id: actionItemId, deleted: true });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+// === COVENANT TYPES ENDPOINTS ===
+app.get("/api/covenant_types", (req, res) => {
+	try {
+		const result = db.prepare("SELECT * FROM covenant_types").all();
+		res.json(result);
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.post("/api/covenant_types", (req, res) => {
+	try {
+		const { name, description } = req.body;
+		if (!name) {
+			return res.status(400).json({ error: "Missing required fields" });
+		}
+		const stmt = db.prepare(
+			"INSERT INTO covenant_types (name, description) VALUES (?, ?)",
+		);
+		const info = stmt.run(name, description || null);
+		res.json({ id: info.lastInsertRowid, name, description });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.put("/api/covenant_types/:id", (req, res) => {
+	try {
+		const covenantTypeId = req.params.id;
+		const { name, description } = req.body;
+		if (!name) {
+			return res.status(400).json({ error: "Missing required fields" });
+		}
+		const stmt = db.prepare(
+			"UPDATE covenant_types SET name = ?, description = ?, last_modified_date = CURRENT_TIMESTAMP WHERE id = ?",
+		);
+		stmt.run(name, description || null, covenantTypeId);
+		res.json({ id: covenantTypeId, name, description });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.delete("/api/covenant_types/:id", (req, res) => {
+	try {
+		const covenantTypeId = req.params.id;
+		// Delete related records first
+		const deletePersonCovenants = db.prepare(
+			"DELETE FROM person_covenant_types WHERE covenant_type_id = ?",
+		);
+		deletePersonCovenants.run(covenantTypeId);
+		const deleteCheckinCovenants = db.prepare(
+			"DELETE FROM checkin_covenant_types WHERE covenant_type_id = ?",
+		);
+		deleteCheckinCovenants.run(covenantTypeId);
+		// Then delete the covenant type
+		const stmt = db.prepare("DELETE FROM covenant_types WHERE id = ?");
+		stmt.run(covenantTypeId);
+		res.json({ id: covenantTypeId, deleted: true });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+// === TAGS ENDPOINTS ===
+app.get("/api/tags", (req, res) => {
+	try {
+		const result = db.prepare("SELECT * FROM tags").all();
+		res.json(result);
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.post("/api/tags", (req, res) => {
+	try {
+		const { tag } = req.body;
+		if (!tag) {
+			return res.status(400).json({ error: "Missing required fields" });
+		}
+		const stmt = db.prepare("INSERT INTO tags (tag) VALUES (?)");
+		const info = stmt.run(tag);
+		res.json({ id: info.lastInsertRowid, tag });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.put("/api/tags/:id", (req, res) => {
+	try {
+		const tagId = req.params.id;
+		const { tag } = req.body;
+		if (!tag) {
+			return res.status(400).json({ error: "Missing required fields" });
+		}
+		const stmt = db.prepare(
+			"UPDATE tags SET tag = ?, last_modified_date = CURRENT_TIMESTAMP WHERE id = ?",
+		);
+		stmt.run(tag, tagId);
+		res.json({ id: tagId, tag });
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+});
+
+app.delete("/api/tags/:id", (req, res) => {
+	try {
+		const tagId = req.params.id;
+		// Delete related records first
+		const deletePersonTags = db.prepare(
+			"DELETE FROM person_tags WHERE tag_id = ?",
+		);
+		deletePersonTags.run(tagId);
+		const deleteCheckinTags = db.prepare(
+			"DELETE FROM checkin_tags WHERE tag_id = ?",
+		);
+		deleteCheckinTags.run(tagId);
+		const deleteActionItemTags = db.prepare(
+			"DELETE FROM action_item_tags WHERE tag_id = ?",
+		);
+		deleteActionItemTags.run(tagId);
+		// Then delete the tag
+		const stmt = db.prepare("DELETE FROM tags WHERE id = ?");
+		stmt.run(tagId);
+		res.json({ id: tagId, deleted: true });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}

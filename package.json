@@ -6,7 +6,8 @@
 	"scripts": {
 		"start": "electron .",
 		"make": "electron-forge make",
-		"test": "mocha tests/app.test.js",
+		"test": "mocha tests/**/*.test.js",
+		"rebuild": "electron-rebuild",
 		"server": "node backend/server.js"
 	},
 	"author": "Your Name",
