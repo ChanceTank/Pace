@@ -25,9 +25,3 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 
 // Expose a flag to indicate this is running in Electron
 contextBridge.exposeInMainWorld('isElectron', true)
-
-// Expose data persistence APIs
-contextBridge.exposeInMainWorld('electronAPI', {
-  saveData: (data: any) => ipcRenderer.invoke('save-data', data),
-  loadData: () => ipcRenderer.invoke('load-data'),
-})

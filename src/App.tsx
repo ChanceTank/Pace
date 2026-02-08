@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
+import reactLogo from "./assets/react.svg";
+import viteLogo from "/electron-vite.animate.svg";
 import "./App.css";
-import Header from "./components/Header";
-import AddTodoForm from "./components/AddTodoForm";
-import TodoList from "./components/TodoList";
-import { TodoItem } from "./types";
 
 function App() {
+	const [count, setCount] = useState(0);
 	const [theme, setTheme] = useState<"light" | "dark">(() => {
 		const saved = localStorage.getItem("theme");
 		return (saved as "light" | "dark") || "light";
 	});
-	const [todos, setTodos] = useState<TodoItem[]>([]);
-	const [newTodoText, setNewTodoText] = useState("");
-	const [editingId, setEditingId] = useState<string | null>(null);
-	const [editingText, setEditingText] = useState("");
+	const [formData, setFormData] = useState({
+		name: "",
+		email: "",
+		message: "",
+	});
 
 	// Log IPC availability for debugging
 	console.log(
@@ -46,114 +46,91 @@ function App() {
 		localStorage.setItem("theme", theme);
 	}, [theme]);
 
-	useEffect(() => {
-		// Load saved todos on component mount
-		const loadTodos = () => {
-			try {
-				const data = localStorage.getItem("todos");
-				if (data) {
-					setTodos(JSON.parse(data));
-				}
-			} catch (error) {
-				console.error("Error loading todos:", error);
-			}
-		};
-		loadTodos();
-	}, []);
-
-	// CRUD Operations
-	const addTodo = async () => {
-		if (newTodoText.trim() === "") return;
-		const newTodo: TodoItem = {
-			id: Date.now().toString(),
-			text: newTodoText.trim(),
-			completed: false,
-			timestamp: new Date().toISOString(),
-		};
-		const updatedTodos = [...todos, newTodo];
-		setTodos(updatedTodos);
-		setNewTodoText("");
-		await saveTodos(updatedTodos);
-	};
-
-	const toggleTodo = async (id: string) => {
-		const updatedTodos = todos.map((todo) =>
-			todo.id === id ? { ...todo, completed: !todo.completed } : todo,
-		);
-		setTodos(updatedTodos);
-		await saveTodos(updatedTodos);
-	};
-
-	const startEditing = (id: string, text: string) => {
-		setEditingId(id);
-		setEditingText(text);
-	};
-
-	const saveEdit = async () => {
-		if (editingId && editingText.trim() !== "") {
-			const updatedTodos = todos.map((todo) =>
-				todo.id === editingId
-					? { ...todo, text: editingText.trim() }
-					: todo,
-			);
-			setTodos(updatedTodos);
-			setEditingId(null);
-			setEditingText("");
-			await saveTodos(updatedTodos);
-		}
-	};
-
-	const cancelEdit = () => {
-		setEditingId(null);
-		setEditingText("");
-	};
-
-	const deleteTodo = async (id: string) => {
-		const updatedTodos = todos.filter((todo) => todo.id !== id);
-		setTodos(updatedTodos);
-		await saveTodos(updatedTodos);
-	};
-
-	const saveTodos = async (todosToSave: TodoItem[]) => {
-		try {
-			localStorage.setItem("todos", JSON.stringify(todosToSave));
-			if (window.electronAPI) {
-				const result = await window.electronAPI.saveData(todosToSave);
-				if (!result.success) {
-					console.error("Error saving todos:", result.error);
-				}
-			}
-		} catch (error) {
-			console.error("Error saving todos:", error);
-		}
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		console.log("Form submitted:", formData);
+		setFormData({ name: "", email: "", message: "" });
 	};
 
 	return (
-		<div className="app-container">
-			<div className="app-inner">
-				<Header
-					theme={theme}
-					onToggleTheme={() =>
+		<div className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white transition-colors">
+			<div>
+				<a href="https://electron-vite.github.io" target="_blank">
+					<img src={viteLogo} className="logo" alt="Vite logo" />
+				</a>
+				<a href="https://react.dev" target="_blank">
+					<img src={reactLogo} className="logo react" alt="React logo" />
+				</a>
+			</div>
+			<h1 className="text-4xl font-bold">Welcome to Pace</h1>
+			<div className="card bg-gray-100 dark:bg-gray-800 p-4 rounded">
+				<button
+					onClick={() => setCount((count) => count + 1)}
+					className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded dark:bg-blue-600 dark:hover:bg-blue-800">
+					count is {count}
+				</button>
+				<button
+					onClick={() =>
 						setTheme((prev) => (prev === "light" ? "dark" : "light"))
 					}
-				/>
-				<AddTodoForm
-					newTodoText={newTodoText}
-					onChange={setNewTodoText}
-					onAdd={addTodo}
-				/>
-				<TodoList
-					todos={todos}
-					onToggle={toggleTodo}
-					onStartEdit={startEditing}
-					onSaveEdit={saveEdit}
-					onCancelEdit={cancelEdit}
-					onDelete={deleteTodo}
-					editingId={editingId}
-					editingText={editingText}
-					setEditingText={setEditingText}
-				/>
+					className="ml-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded dark:bg-gray-600 dark:hover:bg-gray-800">
+					Toggle Theme
+				</button>
+				<p className="mt-2">Current theme: {theme}</p>
+				<p>
+					Edit{" "}
+					<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
+						src/App.tsx
+					</code>{" "}
+					and save to test HMR
+				</p>
 			</div>
+			<form onSubmit={handleSubmit} className="form">
+				<div>
+					<label htmlFor="name">Name</label>
+					<input
+						type="text"
+						id="name"
+						value={formData.name}
+						onChange={(e) =>
+							setFormData({ ...formData, name: e.target.value })
+						}
+						required
+					/>
+				</div>
+				<div>
+					<label htmlFor="email">Email</label>
+					<input
+						type="email"
+						id="email"
+						value={formData.email}
+						onChange={(e) =>
+							setFormData({ ...formData, email: e.target.value })
+						}
+						required
+					/>
+				</div>
+				<div className="mb-4">
+					<label
+						htmlFor="message"
+						className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+						Message
+					</label>
+					<textarea
+						id="message"
+						value={formData.message}
+						onChange={(e) =>
+							setFormData({ ...formData, message: e.target.value })
+						}
+
+						rows={4}
+						required></textarea>
+				</div>
+				<button type="submit">Submit</button>
+			</form>
+			<p className="read-the-docs text-gray-600 dark:text-gray-400">
+				Click on the Vite and React logos to learn more
+			</p>
 		</div>
 	);
 }

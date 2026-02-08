@@ -22,20 +22,7 @@ declare namespace NodeJS {
 }
 
 // Used in Renderer process, expose in `preload.ts`
-interface TodoItem {
-  id: string;
-  text: string;
-  completed: boolean;
-  timestamp: string;
-}
-
-interface ElectronAPI {
-  saveData: (data: TodoItem[]) => Promise<{ success: boolean; error?: string }>;
-  loadData: () => Promise<TodoItem[]>;
-}
-
 interface Window {
   ipcRenderer: import('electron').IpcRenderer
   isElectron: boolean
-  electronAPI: ElectronAPI
 }

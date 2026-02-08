@@ -1,22 +1,20 @@
-import { app as l, BrowserWindow as p, ipcMain as s, Menu as c } from "electron";
-import { fileURLToPath as b } from "node:url";
+import { app as l, BrowserWindow as n, Menu as r } from "electron";
+import { fileURLToPath as p } from "node:url";
 import o from "node:path";
-import i from "node:fs/promises";
-const g = o.dirname(b(import.meta.url));
-process.env.APP_ROOT = o.join(g, "..");
-const a = process.env.VITE_DEV_SERVER_URL, T = o.join(process.env.APP_ROOT, "dist-electron"), m = o.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = a ? o.join(process.env.APP_ROOT, "public") : m;
-const d = o.join(l.getPath("userData"), "pace-data.json");
+const m = o.dirname(p(import.meta.url));
+process.env.APP_ROOT = o.join(m, "..");
+const t = process.env.VITE_DEV_SERVER_URL, d = o.join(process.env.APP_ROOT, "dist-electron"), s = o.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = t ? o.join(process.env.APP_ROOT, "public") : s;
 let e;
-function u() {
-  e = new p({
+function a() {
+  e = new n({
     icon: o.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     title: "Pace Electron App",
     webPreferences: {
-      preload: o.join(T, "preload.mjs")
+      preload: o.join(d, "preload.mjs")
     }
   }), e.setMenuBarVisibility(!0);
-  const r = [
+  const c = [
     {
       label: "File",
       submenu: [
@@ -98,35 +96,22 @@ function u() {
         }
       ]
     }
-  ], t = c.buildFromTemplate(r);
-  c.setApplicationMenu(t), e.webContents.on("did-finish-load", () => {
+  ], i = r.buildFromTemplate(c);
+  r.setApplicationMenu(i), e.webContents.on("did-finish-load", () => {
     e == null || e.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  }), a ? e.loadURL(a) : e.loadFile(o.join(m, "index.html"));
+  }), t ? e.loadURL(t) : e.loadFile(o.join(s, "index.html"));
 }
 l.on("window-all-closed", () => {
   process.platform !== "darwin" && (l.quit(), e = null);
 });
 l.on("activate", () => {
-  p.getAllWindows().length === 0 && u();
+  n.getAllWindows().length === 0 && a();
 });
 l.whenReady().then(() => {
-  u(), s.handle("save-data", async (r, t) => {
-    try {
-      return await i.writeFile(d, JSON.stringify(t, null, 2)), { success: !0 };
-    } catch (n) {
-      return console.error("Error saving data:", n), { success: !1, error: n.message };
-    }
-  }), s.handle("load-data", async () => {
-    try {
-      const r = await i.readFile(d, "utf8");
-      return JSON.parse(r);
-    } catch (r) {
-      return r.code === "ENOENT" ? [] : (console.error("Error loading data:", r), []);
-    }
-  });
+  a();
 });
 export {
-  T as MAIN_DIST,
-  m as RENDERER_DIST,
-  a as VITE_DEV_SERVER_URL
+  d as MAIN_DIST,
+  s as RENDERER_DIST,
+  t as VITE_DEV_SERVER_URL
 };
