@@ -1,13 +1,9 @@
 import { useState, useEffect } from "react";
-import { Check, X, Edit2, Trash2, Plus } from "lucide-react";
 import "./App.css";
-
-interface TodoItem {
-	id: string;
-	text: string;
-	completed: boolean;
-	timestamp: string;
-}
+import Header from "./components/Header";
+import AddTodoForm from "./components/AddTodoForm";
+import TodoList from "./components/TodoList";
+import { TodoItem } from "./types";
 
 function App() {
 	const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -135,118 +131,28 @@ function App() {
 	return (
 		<div className="app-container">
 			<div className="app-inner">
-				<div className="header">
-					<h1 className="app-title">Pace TODO</h1>
-					<button
-						onClick={() =>
-							setTheme((prev) => (prev === "light" ? "dark" : "light"))
-						}
-						className="theme-button">
-						{theme === "light" ? "🌙" : "☀️"}
-					</button>
-				</div>
-
-				{/* Add Todo Form */}
-				<div className="add-form">
-					<div className="add-form-flex">
-						<input
-							type="text"
-							value={newTodoText}
-							onChange={(e) => setNewTodoText(e.target.value)}
-							onKeyPress={(e) => e.key === "Enter" && addTodo()}
-							placeholder="Add a new todo..."
-							className="todo-input"
-						/>
-						<button onClick={addTodo} className="add-button">
-							<Plus size={20} />
-							Add
-						</button>
-					</div>
-				</div>
-
-				{/* Todo List */}
-				<div className="todo-list">
-					{todos.length === 0 ? (
-						<div className="empty-state">
-							<p className="text-lg">No todos yet. Add one above!</p>
-						</div>
-					) : (
-						todos.map((todo) => (
-							<div
-								key={todo.id}
-								className={`todo-item ${todo.completed ? "completed" : ""}`}>
-								<div className="todo-item-flex">
-									<button
-										onClick={() => toggleTodo(todo.id)}
-										className={`toggle-button ${todo.completed ? "completed" : ""}`}>
-										{todo.completed && <Check size={16} />}
-									</button>
-
-									{editingId === todo.id ? (
-										<div className="edit-container">
-											<input
-												type="text"
-												value={editingText}
-												onChange={(e) =>
-													setEditingText(e.target.value)
-												}
-												onKeyPress={(e) => {
-													if (e.key === "Enter") saveEdit();
-													if (e.key === "Escape") cancelEdit();
-												}}
-												className="edit-input"
-												autoFocus
-											/>
-											<button
-												onClick={saveEdit}
-												className="save-button">
-												<Check size={16} />
-											</button>
-											<button
-												onClick={cancelEdit}
-												className="cancel-button">
-												<X size={16} />
-											</button>
-										</div>
-									) : (
-										<>
-											<span
-												className={`todo-text ${todo.completed ? "completed" : ""}`}>
-												{todo.text}
-											</span>
-											<div className="buttons-container">
-												<button
-													onClick={() =>
-														startEditing(todo.id, todo.text)
-													}
-													className="edit-button">
-													<Edit2 size={16} />
-												</button>
-												<button
-													onClick={() => deleteTodo(todo.id)}
-													className="delete-button">
-													<Trash2 size={16} />
-												</button>
-											</div>
-										</>
-									)}
-								</div>
-								<div className="timestamp">
-									{new Date(todo.timestamp).toLocaleString()}
-								</div>
-							</div>
-						))
-					)}
-				</div>
-
-				{todos.length > 0 && (
-					<div className="completed-count">
-						<p>
-							{todos.filter((t) => t.completed).length} of {todos.length}{" "}
-							completed
-						</p>
-					</div>
-				)}
+				<Header
+					theme={theme}
+					onToggleTheme={() =>
+						setTheme((prev) => (prev === "light" ? "dark" : "light"))
+					}
+				/>
+				<AddTodoForm
+					newTodoText={newTodoText}
+					onChange={setNewTodoText}
+					onAdd={addTodo}
+				/>
+				<TodoList
+					todos={todos}
+					onToggle={toggleTodo}
+					onStartEdit={startEditing}
+					onSaveEdit={saveEdit}
+					onCancelEdit={cancelEdit}
+					onDelete={deleteTodo}
+					editingId={editingId}
+					editingText={editingText}
+					setEditingText={setEditingText}
+				/>
 			</div>
 		</div>
 	);
