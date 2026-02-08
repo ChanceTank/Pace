@@ -1,20 +1,21 @@
-import { app as l, BrowserWindow as n, Menu as r } from "electron";
-import { fileURLToPath as p } from "node:url";
+import { app as t, BrowserWindow as p, ipcMain as d, Menu as i } from "electron";
+import { fileURLToPath as g } from "node:url";
 import o from "node:path";
-const m = o.dirname(p(import.meta.url));
-process.env.APP_ROOT = o.join(m, "..");
-const t = process.env.VITE_DEV_SERVER_URL, d = o.join(process.env.APP_ROOT, "dist-electron"), s = o.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = t ? o.join(process.env.APP_ROOT, "public") : s;
+import l from "node:fs";
+const T = o.dirname(g(import.meta.url));
+process.env.APP_ROOT = o.join(T, "..");
+const s = process.env.VITE_DEV_SERVER_URL, b = o.join(process.env.APP_ROOT, "dist-electron"), m = o.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = s ? o.join(process.env.APP_ROOT, "public") : m;
 let e;
-function a() {
-  e = new n({
+function u() {
+  e = new p({
     icon: o.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     title: "Pace Electron App",
     webPreferences: {
-      preload: o.join(d, "preload.mjs")
+      preload: o.join(b, "preload.mjs")
     }
   }), e.setMenuBarVisibility(!0);
-  const c = [
+  const r = [
     {
       label: "File",
       submenu: [
@@ -22,7 +23,7 @@ function a() {
           label: "Exit",
           accelerator: "CmdOrCtrl+Q",
           click: () => {
-            l.quit();
+            t.quit();
           }
         }
       ]
@@ -96,22 +97,71 @@ function a() {
         }
       ]
     }
-  ], i = r.buildFromTemplate(c);
-  r.setApplicationMenu(i), e.webContents.on("did-finish-load", () => {
+  ], n = i.buildFromTemplate(r);
+  i.setApplicationMenu(n), e.webContents.on("did-finish-load", () => {
     e == null || e.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  }), t ? e.loadURL(t) : e.loadFile(o.join(s, "index.html"));
+  }), s ? e.loadURL(s) : e.loadFile(o.join(m, "index.html"));
 }
-l.on("window-all-closed", () => {
-  process.platform !== "darwin" && (l.quit(), e = null);
+t.on("window-all-closed", () => {
+  process.platform !== "darwin" && (t.quit(), e = null);
 });
-l.on("activate", () => {
-  n.getAllWindows().length === 0 && a();
+t.on("activate", () => {
+  p.getAllWindows().length === 0 && u();
 });
-l.whenReady().then(() => {
-  a();
+const a = o.join(t.getPath("userData"), "pace-data.json");
+d.handle("save-data", async (r, n) => {
+  try {
+    return l.writeFileSync(a, JSON.stringify(n, null, 2)), { success: !0 };
+  } catch (c) {
+    return console.error("Error saving data:", c), { success: !1, error: c.message };
+  }
+});
+d.handle("load-data", async () => {
+  try {
+    if (l.existsSync(a)) {
+      const r = l.readFileSync(a, "utf-8");
+      return JSON.parse(r);
+    } else
+      return {
+        people: [],
+        circles: [],
+        groups: [],
+        checkins: [],
+        actionItems: [],
+        tags: [],
+        covenantTypes: [],
+        personTags: [],
+        personGroups: [],
+        personCircles: [],
+        personCovenantTypes: [],
+        checkinTags: [],
+        actionItemTags: [],
+        checkinCovenantTypes: []
+      };
+  } catch (r) {
+    return console.error("Error loading data:", r), {
+      people: [],
+      circles: [],
+      groups: [],
+      checkins: [],
+      actionItems: [],
+      tags: [],
+      covenantTypes: [],
+      personTags: [],
+      personGroups: [],
+      personCircles: [],
+      personCovenantTypes: [],
+      checkinTags: [],
+      actionItemTags: [],
+      checkinCovenantTypes: []
+    };
+  }
+});
+t.whenReady().then(() => {
+  u();
 });
 export {
-  d as MAIN_DIST,
-  s as RENDERER_DIST,
-  t as VITE_DEV_SERVER_URL
+  b as MAIN_DIST,
+  m as RENDERER_DIST,
+  s as VITE_DEV_SERVER_URL
 };

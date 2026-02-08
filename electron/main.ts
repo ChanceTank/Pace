@@ -1,6 +1,7 @@
-import { app, BrowserWindow, Menu, MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, Menu, MenuItemConstructorOptions, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import fs from 'node:fs'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // The built directory structure
@@ -152,6 +153,64 @@ app.on('activate', () => {
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow()
+  }
+})
+
+const dataFilePath = path.join(app.getPath('userData'), 'pace-data.json')
+
+// IPC handlers for data persistence
+ipcMain.handle('save-data', async (_event, data) => {
+  try {
+    fs.writeFileSync(dataFilePath, JSON.stringify(data, null, 2))
+    return { success: true }
+  } catch (error) {
+    console.error('Error saving data:', error)
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('load-data', async () => {
+  try {
+    if (fs.existsSync(dataFilePath)) {
+      const data = fs.readFileSync(dataFilePath, 'utf-8')
+      return JSON.parse(data)
+    } else {
+      // Return default empty data structure
+      return {
+        people: [],
+        circles: [],
+        groups: [],
+        checkins: [],
+        actionItems: [],
+        tags: [],
+        covenantTypes: [],
+        personTags: [],
+        personGroups: [],
+        personCircles: [],
+        personCovenantTypes: [],
+        checkinTags: [],
+        actionItemTags: [],
+        checkinCovenantTypes: []
+      }
+    }
+  } catch (error) {
+    console.error('Error loading data:', error)
+    return {
+      people: [],
+      circles: [],
+      groups: [],
+      checkins: [],
+      actionItems: [],
+      tags: [],
+      covenantTypes: [],
+      personTags: [],
+      personGroups: [],
+      personCircles: [],
+      personCovenantTypes: [],
+      checkinTags: [],
+      actionItemTags: [],
+      checkinCovenantTypes: []
+    }
   }
 })
 
