@@ -1,6 +1,7 @@
-import { app, BrowserWindow, Menu, MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, Menu, MenuItemConstructorOptions, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import fs from 'node:fs/promises'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // The built directory structure
@@ -20,6 +21,9 @@ export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
+
+// Path to the data file
+const dataFilePath = path.join(app.getPath('userData'), 'pace-data.json')
 
 let win: BrowserWindow | null
 
@@ -157,4 +161,29 @@ app.on('activate', () => {
 
 app.whenReady().then(() => {
   createWindow()
+
+  // IPC handlers for data persistence
+  ipcMain.handle('save-data', async (_event, data) => {
+    try {
+      await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2))
+      return { success: true }
+    } catch (error) {
+      console.error('Error saving data:', error)
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  ipcMain.handle('load-data', async () => {
+    try {
+      const data = await fs.readFile(dataFilePath, 'utf8')
+      return JSON.parse(data)
+    } catch (error) {
+      // If file doesn't exist, return empty array
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return []
+      }
+      console.error('Error loading data:', error)
+      return []
+    }
+  })
 })

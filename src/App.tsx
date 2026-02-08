@@ -1,19 +1,23 @@
 import { useState, useEffect } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/electron-vite.animate.svg";
+import { Check, X, Edit2, Trash2, Plus } from "lucide-react";
 import "./App.css";
 
+interface TodoItem {
+	id: string;
+	text: string;
+	completed: boolean;
+	timestamp: string;
+}
+
 function App() {
-	const [count, setCount] = useState(0);
 	const [theme, setTheme] = useState<"light" | "dark">(() => {
 		const saved = localStorage.getItem("theme");
 		return (saved as "light" | "dark") || "light";
 	});
-	const [formData, setFormData] = useState({
-		name: "",
-		email: "",
-		message: "",
-	});
+	const [todos, setTodos] = useState<TodoItem[]>([]);
+	const [newTodoText, setNewTodoText] = useState("");
+	const [editingId, setEditingId] = useState<string | null>(null);
+	const [editingText, setEditingText] = useState("");
 
 	// Log IPC availability for debugging
 	console.log(
@@ -46,91 +50,204 @@ function App() {
 		localStorage.setItem("theme", theme);
 	}, [theme]);
 
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		console.log("Form submitted:", formData);
-		setFormData({ name: "", email: "", message: "" });
+	useEffect(() => {
+		// Load saved todos on component mount
+		const loadTodos = () => {
+			try {
+				const data = localStorage.getItem("todos");
+				if (data) {
+					setTodos(JSON.parse(data));
+				}
+			} catch (error) {
+				console.error("Error loading todos:", error);
+			}
+		};
+		loadTodos();
+	}, []);
+
+	// CRUD Operations
+	const addTodo = async () => {
+		if (newTodoText.trim() === "") return;
+		const newTodo: TodoItem = {
+			id: Date.now().toString(),
+			text: newTodoText.trim(),
+			completed: false,
+			timestamp: new Date().toISOString(),
+		};
+		const updatedTodos = [...todos, newTodo];
+		setTodos(updatedTodos);
+		setNewTodoText("");
+		await saveTodos(updatedTodos);
+	};
+
+	const toggleTodo = async (id: string) => {
+		const updatedTodos = todos.map((todo) =>
+			todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+		);
+		setTodos(updatedTodos);
+		await saveTodos(updatedTodos);
+	};
+
+	const startEditing = (id: string, text: string) => {
+		setEditingId(id);
+		setEditingText(text);
+	};
+
+	const saveEdit = async () => {
+		if (editingId && editingText.trim() !== "") {
+			const updatedTodos = todos.map((todo) =>
+				todo.id === editingId
+					? { ...todo, text: editingText.trim() }
+					: todo,
+			);
+			setTodos(updatedTodos);
+			setEditingId(null);
+			setEditingText("");
+			await saveTodos(updatedTodos);
+		}
+	};
+
+	const cancelEdit = () => {
+		setEditingId(null);
+		setEditingText("");
+	};
+
+	const deleteTodo = async (id: string) => {
+		const updatedTodos = todos.filter((todo) => todo.id !== id);
+		setTodos(updatedTodos);
+		await saveTodos(updatedTodos);
+	};
+
+	const saveTodos = async (todosToSave: TodoItem[]) => {
+		try {
+			localStorage.setItem("todos", JSON.stringify(todosToSave));
+			if (window.electronAPI) {
+				const result = await window.electronAPI.saveData(todosToSave);
+				if (!result.success) {
+					console.error("Error saving todos:", result.error);
+				}
+			}
+		} catch (error) {
+			console.error("Error saving todos:", error);
+		}
 	};
 
 	return (
-		<div className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white transition-colors">
-			<div>
-				<a href="https://electron-vite.github.io" target="_blank">
-					<img src={viteLogo} className="logo" alt="Vite logo" />
-				</a>
-				<a href="https://react.dev" target="_blank">
-					<img src={reactLogo} className="logo react" alt="React logo" />
-				</a>
-			</div>
-			<h1 className="text-4xl font-bold">Welcome to Pace</h1>
-			<div className="card bg-gray-100 dark:bg-gray-800 p-4 rounded">
-				<button
-					onClick={() => setCount((count) => count + 1)}
-					className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded dark:bg-blue-600 dark:hover:bg-blue-800">
-					count is {count}
-				</button>
-				<button
-					onClick={() =>
-						setTheme((prev) => (prev === "light" ? "dark" : "light"))
-					}
-					className="ml-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded dark:bg-gray-600 dark:hover:bg-gray-800">
-					Toggle Theme
-				</button>
-				<p className="mt-2">Current theme: {theme}</p>
-				<p>
-					Edit{" "}
-					<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">
-						src/App.tsx
-					</code>{" "}
-					and save to test HMR
-				</p>
-			</div>
-			<form onSubmit={handleSubmit} className="form">
-				<div>
-					<label htmlFor="name">Name</label>
-					<input
-						type="text"
-						id="name"
-						value={formData.name}
-						onChange={(e) =>
-							setFormData({ ...formData, name: e.target.value })
+		<div className="app-container">
+			<div className="app-inner">
+				<div className="header">
+					<h1 className="app-title">Pace TODO</h1>
+					<button
+						onClick={() =>
+							setTheme((prev) => (prev === "light" ? "dark" : "light"))
 						}
-						required
-					/>
+						className="theme-button">
+						{theme === "light" ? "🌙" : "☀️"}
+					</button>
 				</div>
-				<div>
-					<label htmlFor="email">Email</label>
-					<input
-						type="email"
-						id="email"
-						value={formData.email}
-						onChange={(e) =>
-							setFormData({ ...formData, email: e.target.value })
-						}
-						required
-					/>
-				</div>
-				<div className="mb-4">
-					<label
-						htmlFor="message"
-						className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-						Message
-					</label>
-					<textarea
-						id="message"
-						value={formData.message}
-						onChange={(e) =>
-							setFormData({ ...formData, message: e.target.value })
-						}
 
-						rows={4}
-						required></textarea>
+				{/* Add Todo Form */}
+				<div className="add-form">
+					<div className="add-form-flex">
+						<input
+							type="text"
+							value={newTodoText}
+							onChange={(e) => setNewTodoText(e.target.value)}
+							onKeyPress={(e) => e.key === "Enter" && addTodo()}
+							placeholder="Add a new todo..."
+							className="todo-input"
+						/>
+						<button onClick={addTodo} className="add-button">
+							<Plus size={20} />
+							Add
+						</button>
+					</div>
 				</div>
-				<button type="submit">Submit</button>
-			</form>
-			<p className="read-the-docs text-gray-600 dark:text-gray-400">
-				Click on the Vite and React logos to learn more
-			</p>
+
+				{/* Todo List */}
+				<div className="todo-list">
+					{todos.length === 0 ? (
+						<div className="empty-state">
+							<p className="text-lg">No todos yet. Add one above!</p>
+						</div>
+					) : (
+						todos.map((todo) => (
+							<div
+								key={todo.id}
+								className={`todo-item ${todo.completed ? "completed" : ""}`}>
+								<div className="todo-item-flex">
+									<button
+										onClick={() => toggleTodo(todo.id)}
+										className={`toggle-button ${todo.completed ? "completed" : ""}`}>
+										{todo.completed && <Check size={16} />}
+									</button>
+
+									{editingId === todo.id ? (
+										<div className="edit-container">
+											<input
+												type="text"
+												value={editingText}
+												onChange={(e) =>
+													setEditingText(e.target.value)
+												}
+												onKeyPress={(e) => {
+													if (e.key === "Enter") saveEdit();
+													if (e.key === "Escape") cancelEdit();
+												}}
+												className="edit-input"
+												autoFocus
+											/>
+											<button
+												onClick={saveEdit}
+												className="save-button">
+												<Check size={16} />
+											</button>
+											<button
+												onClick={cancelEdit}
+												className="cancel-button">
+												<X size={16} />
+											</button>
+										</div>
+									) : (
+										<>
+											<span
+												className={`todo-text ${todo.completed ? "completed" : ""}`}>
+												{todo.text}
+											</span>
+											<div className="buttons-container">
+												<button
+													onClick={() =>
+														startEditing(todo.id, todo.text)
+													}
+													className="edit-button">
+													<Edit2 size={16} />
+												</button>
+												<button
+													onClick={() => deleteTodo(todo.id)}
+													className="delete-button">
+													<Trash2 size={16} />
+												</button>
+											</div>
+										</>
+									)}
+								</div>
+								<div className="timestamp">
+									{new Date(todo.timestamp).toLocaleString()}
+								</div>
+							</div>
+						))
+					)}
+				</div>
+
+				{todos.length > 0 && (
+					<div className="completed-count">
+						<p>
+							{todos.filter((t) => t.completed).length} of {todos.length}{" "}
+							completed
+						</p>
+					</div>
+				)}
+			</div>
 		</div>
 	);
 }
