@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, MenuItemConstructorOptions, ipcMain } from 'electron'
+import { app, BrowserWindow, Menu, MenuItemConstructorOptions, ipcMain, dialog } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs/promises'
@@ -44,6 +44,33 @@ function createWindow() {
     {
       label: 'File',
       submenu: [
+        {
+          label: 'Import',
+          accelerator: 'CmdOrCtrl+I',
+          click: async () => {
+            const result = await dialog.showOpenDialog(win!, {
+              properties: ['openFile'],
+              filters: [{ name: 'JSON', extensions: ['json'] }]
+            })
+            if (!result.canceled) {
+              try {
+                const data = await fs.readFile(result.filePaths[0], 'utf8')
+                const todos = JSON.parse(data)
+                win?.webContents.send('set-todos', todos)
+              } catch (error) {
+                console.error('Error importing data:', error)
+              }
+            }
+          }
+        },
+        {
+          label: 'Export',
+          accelerator: 'CmdOrCtrl+E',
+          click: async () => {
+            win?.webContents.send('get-todos')
+          }
+        },
+        { type: 'separator' },
         {
           label: 'Exit',
           accelerator: 'CmdOrCtrl+Q',
@@ -185,5 +212,21 @@ app.whenReady().then(() => {
       console.error('Error loading data:', error)
       return []
     }
+  })
+
+  // Handle export from renderer
+  ipcMain.on('export-todos', async (_event, todos) => {
+    const result = await dialog.showSaveDialog(win!, {
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    if (!result.canceled) {
+      try {
+        await fs.writeFile(result.filePath!, JSON.stringify(todos, null, 2))
+      } catch (error) {
+        console.error('Error exporting todos:', error)
+      }
+    }
+    // Notify renderer that export is done
+    win?.webContents.send('export-done')
   })
 })

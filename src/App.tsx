@@ -18,6 +18,7 @@ function App() {
 	const [newTodoText, setNewTodoText] = useState("");
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [editingText, setEditingText] = useState("");
+	const [isExporting, setIsExporting] = useState(false);
 
 	// Log IPC availability for debugging
 	console.log(
@@ -131,6 +132,50 @@ function App() {
 			console.error("Error saving todos:", error);
 		}
 	};
+
+	// Handle export request from main process
+	useEffect(() => {
+		const exportListener = () => {
+			if (!isExporting) {
+				setIsExporting(true);
+				window.ipcRenderer.send("export-todos", todos);
+			}
+		};
+		if (window.ipcRenderer) {
+			window.ipcRenderer.on("get-todos", exportListener);
+			return () => {
+				window.ipcRenderer.off("get-todos", exportListener);
+			};
+		}
+	}, [todos, isExporting]);
+
+	// Listen for export completion
+	useEffect(() => {
+		const exportDoneListener = () => {
+			setIsExporting(false);
+		};
+		if (window.ipcRenderer) {
+			window.ipcRenderer.on("export-done", exportDoneListener);
+			return () => {
+				window.ipcRenderer.off("export-done", exportDoneListener);
+			};
+		}
+	}, []);
+
+	// Listen for imported todos
+	useEffect(() => {
+		const setTodosListener = async (_event: unknown, ...args: unknown[]) => {
+			const importedTodos = args[0] as TodoItem[];
+			setTodos(importedTodos);
+			await saveTodos(importedTodos);
+		};
+		if (window.ipcRenderer) {
+			window.ipcRenderer.on("set-todos", setTodosListener);
+			return () => {
+				window.ipcRenderer.off("set-todos", setTodosListener);
+			};
+		}
+	}, []);
 
 	return (
 		<div className="app-container">

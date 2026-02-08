@@ -1,25 +1,50 @@
-import { app as l, BrowserWindow as p, ipcMain as s, Menu as c } from "electron";
-import { fileURLToPath as b } from "node:url";
+import { app as l, BrowserWindow as m, ipcMain as c, dialog as u, Menu as d } from "electron";
+import { fileURLToPath as h } from "node:url";
 import o from "node:path";
-import i from "node:fs/promises";
-const g = o.dirname(b(import.meta.url));
-process.env.APP_ROOT = o.join(g, "..");
-const a = process.env.VITE_DEV_SERVER_URL, T = o.join(process.env.APP_ROOT, "dist-electron"), m = o.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = a ? o.join(process.env.APP_ROOT, "public") : m;
-const d = o.join(l.getPath("userData"), "pace-data.json");
+import n from "node:fs/promises";
+const C = o.dirname(h(import.meta.url));
+process.env.APP_ROOT = o.join(C, "..");
+const i = process.env.VITE_DEV_SERVER_URL, E = o.join(process.env.APP_ROOT, "dist-electron"), b = o.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = i ? o.join(process.env.APP_ROOT, "public") : b;
+const p = o.join(l.getPath("userData"), "pace-data.json");
 let e;
-function u() {
-  e = new p({
+function g() {
+  e = new m({
     icon: o.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     title: "Pace Electron App",
     webPreferences: {
-      preload: o.join(T, "preload.mjs")
+      preload: o.join(E, "preload.mjs")
     }
   }), e.setMenuBarVisibility(!0);
   const r = [
     {
       label: "File",
       submenu: [
+        {
+          label: "Import",
+          accelerator: "CmdOrCtrl+I",
+          click: async () => {
+            const t = await u.showOpenDialog(e, {
+              properties: ["openFile"],
+              filters: [{ name: "JSON", extensions: ["json"] }]
+            });
+            if (!t.canceled)
+              try {
+                const s = await n.readFile(t.filePaths[0], "utf8"), f = JSON.parse(s);
+                e == null || e.webContents.send("set-todos", f);
+              } catch (s) {
+                console.error("Error importing data:", s);
+              }
+          }
+        },
+        {
+          label: "Export",
+          accelerator: "CmdOrCtrl+E",
+          click: async () => {
+            e == null || e.webContents.send("get-todos");
+          }
+        },
+        { type: "separator" },
         {
           label: "Exit",
           accelerator: "CmdOrCtrl+Q",
@@ -98,35 +123,46 @@ function u() {
         }
       ]
     }
-  ], t = c.buildFromTemplate(r);
-  c.setApplicationMenu(t), e.webContents.on("did-finish-load", () => {
+  ], a = d.buildFromTemplate(r);
+  d.setApplicationMenu(a), e.webContents.on("did-finish-load", () => {
     e == null || e.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  }), a ? e.loadURL(a) : e.loadFile(o.join(m, "index.html"));
+  }), i ? e.loadURL(i) : e.loadFile(o.join(b, "index.html"));
 }
 l.on("window-all-closed", () => {
   process.platform !== "darwin" && (l.quit(), e = null);
 });
 l.on("activate", () => {
-  p.getAllWindows().length === 0 && u();
+  m.getAllWindows().length === 0 && g();
 });
 l.whenReady().then(() => {
-  u(), s.handle("save-data", async (r, t) => {
+  g(), c.handle("save-data", async (r, a) => {
     try {
-      return await i.writeFile(d, JSON.stringify(t, null, 2)), { success: !0 };
-    } catch (n) {
-      return console.error("Error saving data:", n), { success: !1, error: n.message };
+      return await n.writeFile(p, JSON.stringify(a, null, 2)), { success: !0 };
+    } catch (t) {
+      return console.error("Error saving data:", t), { success: !1, error: t.message };
     }
-  }), s.handle("load-data", async () => {
+  }), c.handle("load-data", async () => {
     try {
-      const r = await i.readFile(d, "utf8");
+      const r = await n.readFile(p, "utf8");
       return JSON.parse(r);
     } catch (r) {
       return r.code === "ENOENT" ? [] : (console.error("Error loading data:", r), []);
     }
+  }), c.on("export-todos", async (r, a) => {
+    const t = await u.showSaveDialog(e, {
+      filters: [{ name: "JSON", extensions: ["json"] }]
+    });
+    if (!t.canceled)
+      try {
+        await n.writeFile(t.filePath, JSON.stringify(a, null, 2));
+      } catch (s) {
+        console.error("Error exporting todos:", s);
+      }
+    e == null || e.webContents.send("export-done");
   });
 });
 export {
-  T as MAIN_DIST,
-  m as RENDERER_DIST,
-  a as VITE_DEV_SERVER_URL
+  E as MAIN_DIST,
+  b as RENDERER_DIST,
+  i as VITE_DEV_SERVER_URL
 };
